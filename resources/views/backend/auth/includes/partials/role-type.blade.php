@@ -28,7 +28,7 @@
             </blockquote>
         @else
             <blockquote class="ml-3">
-                <i class="fa fa-minus-circle"></i> @lang('No Permissions')
+                <!-- <i class="fa fa-minus-circle"></i> @lang('No Permissions') -->
             </blockquote>
         @endif
     @endif

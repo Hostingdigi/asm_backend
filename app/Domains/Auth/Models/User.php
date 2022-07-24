@@ -16,8 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Lab404\Impersonate\Models\Impersonate;
-use Spatie\Permission\Traits\HasRoles;
 use Laravel\Passport\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * Class User.
@@ -25,19 +25,20 @@ use Laravel\Passport\HasApiTokens;
 class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenticatable
 {
     use HasApiTokens,
-        HasRoles,
-        Impersonate,
-        MustVerifyEmailTrait,
-        Notifiable,
-        SoftDeletes,
-        TwoFactorAuthentication,
-        UserAttribute,
-        UserMethod,
-        UserRelationship,
+    HasRoles,
+    Impersonate,
+    MustVerifyEmailTrait,
+    Notifiable,
+    SoftDeletes,
+    TwoFactorAuthentication,
+    UserAttribute,
+    UserMethod,
+    UserRelationship,
         UserScope;
 
     public const TYPE_ADMIN = 'admin';
     public const TYPE_USER = 'user';
+    public const TYPE_SUPPLIER = 'supplier';
 
     /**
      * The attributes that are mass assignable.
@@ -116,6 +117,12 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+    
+
+    public function scopeActiveOnly($query)
+    {
+        return $query->where('active',1)->orderBy('name')->get();
+    }
 
     /**
      * Send the registration verification email.
@@ -144,6 +151,6 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
      */
     public function canBeImpersonated(): bool
     {
-        return ! $this->isMasterAdmin();
+        return !$this->isMasterAdmin();
     }
 }

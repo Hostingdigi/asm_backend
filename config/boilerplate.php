@@ -85,6 +85,8 @@ return [
              * It is not recommended to change
              */
             'admin' => 'Administrator',
+            'user' => 'Customer',
+            'supplier' => 'Supplier',
         ],
     ],
 

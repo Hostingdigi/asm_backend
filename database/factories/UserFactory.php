@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 
 $factory->define(User::class, function (Faker $faker) {
     return [
-        'type' => $faker->randomElement([User::TYPE_ADMIN, User::TYPE_USER]),
+        'type' => $faker->randomElement([User::TYPE_ADMIN, User::TYPE_USER, User::TYPE_SUPPLIER]),
         'name' => $faker->name,
         'email' => $faker->unique()->safeEmail,
         'email_verified_at' => now(),

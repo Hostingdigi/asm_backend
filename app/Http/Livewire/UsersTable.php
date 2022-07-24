@@ -55,9 +55,17 @@ class UsersTable extends TableComponent
     public function columns(): array
     {
         return [
-            Column::make(__('Type'))
-                ->view('backend.auth.user.includes.type', 'user')
-                ->sortable(),
+            Column::make(__('Roles'), 'roles_label')
+                ->customAttribute()
+                ->html()
+                ->searchable(function ($builder, $term) {
+                    return $builder->orWhereHas('roles', function ($query) use ($term) {
+                        return $query->where('name', 'like', '%'.$term.'%');
+                    });
+                }),
+            // Column::make(__('Type'))
+            //     ->view('backend.auth.user.includes.type', 'user')
+            //     ->sortable(),
             Column::make(__('Name'))
                 ->searchable()
                 ->sortable(),
@@ -74,14 +82,7 @@ class UsersTable extends TableComponent
             //     ->sortable(function ($builder, $direction) {
             //         return $builder->orderBy('two_factor_auth_count', $direction);
             //     }),
-            Column::make(__('Roles'), 'roles_label')
-                ->customAttribute()
-                ->html()
-                ->searchable(function ($builder, $term) {
-                    return $builder->orWhereHas('roles', function ($query) use ($term) {
-                        return $query->where('name', 'like', '%'.$term.'%');
-                    });
-                }),
+            
             Column::make(__('Additional Permissions'), 'permissions_label')
                 ->customAttribute()
                 ->html()

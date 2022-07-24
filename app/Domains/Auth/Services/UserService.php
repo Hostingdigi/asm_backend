@@ -113,6 +113,10 @@ class UserService extends BaseService
     {
         DB::beginTransaction();
 
+        if(empty($data['roles'])){
+            $data['roles'] = $data['type'];
+        }
+
         try {
             $user = $this->createUser([
                 'type' => $data['type'],
