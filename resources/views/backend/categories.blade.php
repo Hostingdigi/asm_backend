@@ -7,20 +7,88 @@
         <x-slot name="header">
             List All Categories
 
-            <a href="" class="btn btn-success float-right">
+            <a href="#createCategory" data-coreui-toggle="modal" class="btn btn-success float-right">
                 <i class="fa fa-plus"></i>
                 CREATE
             </a>
+
+            <div class="modal fade" id="createCategory" tabindex="-1" aria-labelledby="createCategoryLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createCategoryLabel">Create New Category</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" action="{{ route('admin.masters.categories.store') }}" id="createCategoryForm" novalidate>
+                        <div class="modal-body">
+                        {{csrf_field()}}
+                            <div class="mb-3">
+                                    <label class="col-form-label">Parent</label>
+                                    <select name="parent" class="form-control">
+                                        <option value="0">--select--</option>
+                                        @foreach($parent as $p)
+                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                        @endforeach
+                                    </select>
+                            </div>
+                            <div class="mb-3">
+                                    <label class="col-form-label">Name</label>
+                                    <input type="text" required class="form-control" name="category_name" placeholder="Enter your category name" autofocus />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success" type="submit">Save</button>
+                            <button class="btn btn-danger" type="button" data-coreui-dismiss="modal">Cancel</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="editCategory" tabindex="-1" aria-labelledby="editCategoryLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editCategory">Edit Category</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" action="" id="editCategoryForm" novalidate>
+                        <div class="modal-body">
+                        {{csrf_field()}}
+                    <input type="hidden" name="_method" value="PUT">
+                            <div class="mb-3">
+                                    <label class="col-form-label">Parent</label>
+                                    <select name="parent" id="parent_id" class="form-control">
+                                        <option value="0">--select--</option>
+                                        @foreach($parent as $p)
+                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                        @endforeach
+                                    </select>
+                            </div>
+                            <div class="mb-3">
+                                    <label class="col-form-label">Name</label>
+                                    <input type="text" required class="form-control" id="cat_name" name="category_name" placeholder="Enter your category name" autofocus />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success" type="submit">Save</button>
+                            <button class="btn btn-danger" type="button" data-coreui-dismiss="modal">Cancel</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
         </x-slot>
 
         <x-slot name="body">
-            <table id="myTable" class="table table-bordered table-hover">
+            <table id="categoryTable" class="table table-bordered table-hover">
                 <thead class="table-dark">
                     <tr>
                     <th>#</th>
                     <th>PARENT CATEGORY</th>
                     <th>NAME</th>
-                    <th>SUB CATEGORIES</th>
+                    <!-- <th>SUB CATEGORIES</th> -->
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                     </tr>
@@ -36,7 +104,55 @@
 @push('after-scripts')
 <script>
     $(document).ready( function () {
-        $('#myTable').DataTable();
+
+        $("body").on("click", ".editRow", function(e)
+        {
+            $.ajax({
+                type : 'GET',
+                url : $(this).data('href'),
+                dataType : 'JSON',
+                success: function(result)
+                {
+                    $("#editCategoryForm").attr('action',"{{ route('admin.masters.categories.index') }}/"+result['data']['id']);
+                    $("input[name='cat_id']").val(result['data']['id']);
+                    $("#parent_id").val(result['data']['parent_id']);
+                    $("#cat_name").val(result['data']['name']);
+                    $("#editCategory").modal("show");
+                }
+            });
+        });
+
+        $("#editCategoryForm").validate({});
+
+        $("#createCategoryForm").validate(/*{
+            errorPlacement: function errorPlacement(error, element) { element.before(error); },
+            errorElement: "span",
+            errorPlacement: function(error, element) {
+                error.addClass("error invalid-feedback");
+                element.parent("div.form-group").append(error);
+                element.addClass('is-invalid');
+            },
+            highlight: function(element, errorClass, validClass) {
+                $(element).addClass("is-invalid");
+            },
+            unhighlight: function(element, errorClass, validClass) {
+                $(element).removeClass("is-invalid");
+            },
+        }*/);
+
+        $('#categoryTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: "{{ route('admin.masters.categories.index') }}",
+            columns: [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+                    { data: 'parent', name: 'parent' },
+                    { data: 'name', name: 'name' },
+                    { data: 'status', name: 'status' },
+                    { data: 'actions', name: 'actions' }
+                ]
+        });
+
     });
 </script>
 @endpush

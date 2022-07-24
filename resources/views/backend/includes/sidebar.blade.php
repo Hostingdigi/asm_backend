@@ -99,7 +99,7 @@
                     @endif
 
                     @if ($logged_in_user->hasAllAccess())
-                        <li class="c-sidebar-nav-item d-none">
+                        <li class="c-sidebar-nav-item ">
                             <x-utils.link
                                 :href="route('admin.auth.role.index')"
                                 class="c-sidebar-nav-link"

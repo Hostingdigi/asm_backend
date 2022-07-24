@@ -4,10 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class Product extends Model
 {
-    protected $table = 'categories';
-    protected $fillable = ['name','parent_id','status','description'];
+    protected $fillable = ['user_id','category_id','brand_id','code','name', 'cover_image', 'unit', 'price', 'status','description'];
 
     public function scopeActiveOnly($query)
     {

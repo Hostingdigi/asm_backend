@@ -3,7 +3,7 @@
 @section('title', __('User Management'))
 
 @section('breadcrumb-links')
-    @include('backend.auth.user.includes.breadcrumb-links')
+    <!-- @include('backend.auth.user.includes.breadcrumb-links') -->
 @endsection
 
 @section('content')

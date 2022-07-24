@@ -7,21 +7,22 @@
         <x-slot name="header">
             List All Products
 
-            <a href="" class="btn btn-success float-right">
+            <a href="{{ route('admin.products.create') }}" class="btn btn-success float-right">
                 <i class="fa fa-plus"></i>
                 CREATE
             </a>
         </x-slot>
 
         <x-slot name="body">
-            <table id="myTable" class="table table-bordered table-hover">
+            <table id="categoryTable" class="table table-bordered table-hover">
                 <thead class="table-dark">
                     <tr>
                     <th>#</th>
                     <th>NAME</th>
-                    <th>BRAND</th>
+                    <th>CATEGORY</th>
                     <th>IMAGE</th>
                     <th>PRICE</th>
+                    <th>UNIT</th>
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                     </tr>
@@ -37,7 +38,21 @@
 @push('after-scripts')
 <script>
     $(document).ready( function () {
-        $('#myTable').DataTable();
+        $('#categoryTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: "{{ route('admin.products.index') }}",
+            columns: [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+                    { data: 'name', name: 'name' },
+                    { data: 'category', name: 'category' },
+                    { data: 'image', name: 'image' },
+                    { data: 'price', name: 'price' },
+                    { data: 'unit', name: 'unit' },
+                    { data: 'status', name: 'status' },
+                    { data: 'actions', name: 'actions' }
+                ]
+        });
     });
 </script>
 @endpush
