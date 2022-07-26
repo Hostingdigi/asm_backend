@@ -57,6 +57,15 @@ Route::prefix('masters')->group(function () {
         // 'update' => 'mstr.department.update',
     // ]);
 
+    Route::resource('units', 'Backend\UnitController')->names([
+        'index' => 'masters.units.index',
+        'store' => 'masters.units.store',
+        'edit' => 'masters.units.edit',
+        'update' => 'masters.units.update',
+    ]);
+    Route::get('units/update/status/{userId}/{statusCode}', 'Backend\UnitController@updateStatus')->name('masters.units.updateStatus');
+    Route::post('units/check-duplicate', 'Backend\UnitController@checkDuplicate')->name('masters.units.checkDuplicate');
+
 });
 
 // Route::get('products', [ProductController::class, 'index'])

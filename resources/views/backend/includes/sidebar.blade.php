@@ -52,6 +52,14 @@
                                 :active="activeClass(Route::is('admin.masters.categories'), 'c-active')" />
                         </li>
 
+                        <li class="c-sidebar-nav-item">
+                            <x-utils.link
+                                :href="route('admin.masters.units.index')"
+                                class="c-sidebar-nav-link"
+                                :text="__('Units')"
+                                :active="activeClass(Route::is('admin.masters.units'), 'c-active')" />
+                        </li>
+
                         
                 </ul>
             </li>

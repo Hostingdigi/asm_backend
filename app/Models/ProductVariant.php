@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class ProductVariant extends Model
 {
-    protected $fillable = ['user_id','category_id','brand_id','code','name', 'cover_image', 'unit', 'price', 'status','description'];
+    protected $fillable = ['name', 'price', 'unit_id', 'product_id', 'status'];
 
     public function scopeActiveOnly($query)
     {
@@ -16,10 +16,5 @@ class Product extends Model
     public function scopeBothInActive($query)
     {
         return $query->where('status','!=','2')->orderBy('name')->get();
-    }
-
-    public function variants()
-    {
-        return $this->hasMany(ProductVariant::class);
     }
 }

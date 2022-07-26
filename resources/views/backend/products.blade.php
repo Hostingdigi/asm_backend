@@ -21,8 +21,8 @@
                     <th>NAME</th>
                     <th>CATEGORY</th>
                     <th>IMAGE</th>
-                    <th>PRICE</th>
-                    <th>UNIT</th>
+                    <th>VARIANTS</th>
+                    <!-- <th>UNIT</th> -->
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                     </tr>
@@ -47,8 +47,7 @@
                     { data: 'name', name: 'name' },
                     { data: 'category', name: 'category' },
                     { data: 'image', name: 'image' },
-                    { data: 'price', name: 'price' },
-                    { data: 'unit', name: 'unit' },
+                    { data: 'varants', name: 'varants' },
                     { data: 'status', name: 'status' },
                     { data: 'actions', name: 'actions' }
                 ]
