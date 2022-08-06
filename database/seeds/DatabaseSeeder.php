@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(AuthSeeder::class);
+        $this->call(WeekDaysSeeder::class);
         $this->call(AnnouncementSeeder::class);
 
         Model::reguard();

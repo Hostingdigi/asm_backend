@@ -57,6 +57,15 @@ Route::prefix('masters')->group(function () {
         // 'update' => 'mstr.department.update',
     // ]);
 
+    Route::resource('units', 'Backend\UnitController')->names([
+        'index' => 'masters.units.index',
+        'store' => 'masters.units.store',
+        'edit' => 'masters.units.edit',
+        'update' => 'masters.units.update',
+    ]);
+    Route::get('units/update/status/{userId}/{statusCode}', 'Backend\UnitController@updateStatus')->name('masters.units.updateStatus');
+    Route::post('units/check-duplicate', 'Backend\UnitController@checkDuplicate')->name('masters.units.checkDuplicate');
+
 });
 
 // Route::get('products', [ProductController::class, 'index'])
@@ -66,6 +75,15 @@ Route::prefix('masters')->group(function () {
 //             ->push(__('Products'), '');
 //     });
 
+Route::prefix('settings')->group(function () {
+
+    Route::get('delivery-date', 'Backend\DeliveryDateController@index')->name('settings.delivery-date.index');
+    Route::post('delivery-date/save-week-day', 'Backend\DeliveryDateController@saveWeekDay')->name('settings.delivery-date.saveWeekDay');
+    Route::post('delivery-date/remove-day', 'Backend\DeliveryDateController@removeDay')->name('settings.delivery-date.removeDay');
+    Route::post('delivery-date/save-date', 'Backend\DeliveryDateController@saveDate')->name('settings.delivery-date.saveDate');
+
+});
+
     Route::resource('products', 'Backend\ProductController')->names([
         'index' => 'products.index',
         'store' => 'products.store',
@@ -74,3 +92,4 @@ Route::prefix('masters')->group(function () {
     ]);
     Route::get('products/update/status/{userId}/{statusCode}', 'Backend\ProductController@updateStatus')->name('products.updateStatus');
     Route::post('products/check-duplicate', 'Backend\ProductController@checkDuplicate')->name('products.checkDuplicate');
+    Route::post('products/update-variant-status', 'Backend\ProductController@updateVariantStatus')->name('products.updateVariantStatus');

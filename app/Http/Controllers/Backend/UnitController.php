@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use DataTables;
-use App\Models\Brand;
+use App\Models\Unit;
 
-class BrandController extends Controller
+class UnitController extends Controller
 {
     protected $flashData = [
         'status' => 0,
         'message' => 'Something went wrong.Try again later.',
     ];
+    
     /**
      * Display a listing of the resource.
      *
@@ -21,7 +22,7 @@ class BrandController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Brand::select(['id', 'name', 'status'])
+            $users = Unit::select(['id', 'name', 'status'])
                 ->bothInActive();
 
             return Datatables::of($users)
@@ -39,13 +40,13 @@ class BrandController extends Controller
                 })
                 ->addColumn('actions', function ($row) {
                     if ($row->status == '1') {
-                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.masters.units.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
                     } else if ($row->status == 0) {
-                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.masters.units.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
                     }
 
-                    $actions .= '<a title="Update" data-href="' . route('admin.masters.brands.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
-                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
+                    $actions .= '<a title="Update" data-href="' . route('admin.masters.units.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
+                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.masters.units.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
 
                     return $actions;
                 })
@@ -53,7 +54,7 @@ class BrandController extends Controller
                 ->make(true);
         }
 
-        return view('backend.brands');
+        return view('backend.units');
     }
 
     /**
@@ -74,8 +75,8 @@ class BrandController extends Controller
      */
     public function store(Request $request)
     {
-        $createClinic = Brand::create([
-            'name' => trim($request->brand_name),
+        $createClinic = Unit::create([
+            'name' => trim($request->unit_name),
             'description' => ''
         ]);
 
@@ -86,7 +87,7 @@ class BrandController extends Controller
 
         $request->session()->flash('flashData', $this->flashData);
 
-        return redirect()->route('admin.masters.brands.index');
+        return redirect()->route('admin.masters.units.index');
     }
 
     /**
@@ -109,7 +110,7 @@ class BrandController extends Controller
     public function edit($id)
     {
         return response()->json([
-            'data' => Brand::select(['id', 'name'])->find($id),
+            'data' => Unit::select(['id', 'name'])->find($id),
         ]);
     }
 
@@ -122,8 +123,8 @@ class BrandController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $createClinic = Brand::where('id', $id)->update([
-            'name' => trim($request->brand_name),
+        $createClinic = Unit::where('id', $id)->update([
+            'name' => trim($request->unit_name),
             'description' => '',
         ]);
 
@@ -150,7 +151,7 @@ class BrandController extends Controller
 
     public function updateStatus(Request $request, $userId, $statusCode)
     {
-        $result = Brand::where('id', trim($userId))
+        $result = Unit::where('id', trim($userId))
             ->update([
                 'status' => trim($statusCode),
             ]);
@@ -167,5 +168,27 @@ class BrandController extends Controller
         return response()->json([
             'status' => 1,
         ]);
+    }
+
+    public function checkDuplicate(Request $request)
+    {
+        $exists = true;
+
+        $rowIdTrue = ($request->has('rowId') ? TRUE : FALSE);
+        $rowId = ($request->has('rowId') ? trim($request->rowId) : '');
+
+        if(Unit::where([
+            ['name','=',trim($request->unit_name)],
+            ['status','!=','2']
+        ])
+        ->when($rowIdTrue, function($query) use($rowId)
+        {
+            return $query->where('id','!=',$rowId);
+        })
+        ->count() > 0)
+        {
+            $exists = false;
+        }
+        return response()->json($exists);
     }
 }

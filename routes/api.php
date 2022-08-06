@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\ApiAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,28 +11,26 @@ use Illuminate\Http\Request;
 | routes are loaded by the RouteServiceProvider within a group which
 | is assigned the "api" middleware group. Enjoy building your API!
 |
-*/
+ */
 
 //Route::middleware('auth:api')->get('/user', function (Request $request) {
 //    return $request->user();
 //});
 
-use App\Models\Category;
+use App\Http\Controllers\Api\ApiController;
 use App\Models\Brand;
-use App\Models\Product;
-use App\Http\Controllers\Api\ApiAuthController;
-use App\Domains\Auth\Models\User;
+use App\Models\Category;
 
-Route::post('register', [ApiAuthController::class,'register']);
+Route::post('register', [ApiAuthController::class, 'register']);
 Route::post('login', [ApiAuthController::class, 'login']);
 
-Route::get('categories', function(){
+Route::get('categories', function () {
 
-    $data = Category::select('id','name')->where('parent_id',0)->activeOnly();
+    $data = Category::select('id', 'name')->where('parent_id', 0)->activeOnly();
 
-    $data = $data->map(function($row){
+    $data = $data->map(function ($row) {
 
-        $row['subCategories'] = Category::select('id','name')->where('parent_id',$row->id)->activeOnly();
+        $row['subCategories'] = Category::select('id', 'name')->where('parent_id', $row->id)->activeOnly();
 
         return $row;
     });
@@ -41,27 +39,31 @@ Route::get('categories', function(){
 });
 
 Route::get('brands', function () {
-    return response()->json(['data' => Brand::select(['id','name'])->activeOnly()]);
+    return response()->json(['data' => Brand::select(['id', 'name'])->activeOnly()]);
 });
 
+Route::prefix('products')->group(function () {
 
-Route::post('products', function () {
+    Route::post('/', [ApiController::class, 'listProducts']);
+    Route::get('/{productId}', [ApiController::class, 'productDetails']);
 
-    $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image', 'unit', 'price',
-        'description')->activeOnly();
+});
 
-    $data = $data->map(function ($row) {
+Route::middleware('auth:api')->group(function () {
 
-        $units = ["KG","PC","LTR"];
+    //
+    Route::get('logout', [ApiAuthController::class, 'logout']);
 
-        $row['supplier_name'] = User::find($row->supplier_id)->name;
-        $row['category_name'] = Category::find($row->category_id)->name;
-        $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-        $row['image'] = !empty($row->image) ? url('img/'.$row->image) : '';
-        $row['unit'] = $units[$row->unit-1];
+    //Cart
+    Route::prefix('cart')->group(function () {
 
-        return $row;
+        Route::get('list', [ApiController::class, 'listCartItems']);
+        Route::post('add-item', [ApiController::class, 'addItem']);
+        Route::post('update-item', [ApiController::class, 'updateItem']);
+        Route::post('remove-item', [ApiController::class, 'removeItem']);
+        Route::get('clear', [ApiController::class, 'clearCart']);
+
+        // Route::get('/{productId}', [ApiController::class, 'productDetails']);
+
     });
-
-    return response()->json(['data' => $data]);
 });

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Arr;
+use App\Domains\Auth\Models\User;
 use App\Domains\Auth\Services\UserService;
+use App\Http\Controllers\Controller;
+use Hash;
+use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
 
 class ApiAuthController extends Controller
 {
@@ -28,17 +30,16 @@ class ApiAuthController extends Controller
             'name' => 'required|max:255',
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
-            'mobile' => 'required|digits:10'
+            'mobile' => 'required|digits:10',
         ];
         $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails())
-        {
+        if ($validator->fails()) {
             $errors = $validator->errors();
-            
+
             $formatedErrors = [];
 
-            foreach($rules as $rk => $rule){
+            foreach ($rules as $rk => $rule) {
                 if ($errors->has($rk)) {
                     array_push($formatedErrors, [$rk => $errors->first($rk)]);
                 }
@@ -46,7 +47,7 @@ class ApiAuthController extends Controller
 
             return response([
                 'status' => false,
-                'errors'=> $formatedErrors,
+                'errors' => $formatedErrors,
             ], 422);
         }
 
@@ -60,7 +61,6 @@ class ApiAuthController extends Controller
 
         $token = $user->createToken('API Token')->accessToken;
 
-        
         // $data['password'] = bcrypt($request->password);
         // $user = User::create($data);
         // $token = $user->createToken('API Token')->accessToken;
@@ -72,6 +72,42 @@ class ApiAuthController extends Controller
 
     public function login(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+        if ($validator->fails()) {
+            return response(['status' => false, 'errors' => $validator->errors()->all()], 422);
+        }
+        $user = User::where('email', $request->email)->first();
+        if ($user) {
+            if (Hash::check($request->password, $user->password)) {
+
+                if (!auth()->attempt($request->all())) {
+                    return response(['status' => false, 'errors' => ['Incorrect Details.
+                            Please try again', ]]);
+                }
+
+                $token = auth()->user()->createToken('API Token')->accessToken;
+                // $token = 1;// $user->createToken('API Token')->accessToken;
+                $response = ['status' => true, 'token' => $token, 'user' => [collect($user)->only(['id', 'name', 'email', 'avatar'])]];
+                return response($response, 200);
+            } else {
+                $response = ['status' => false, "errors" => ["Password mismatch"]];
+                return response($response, 422);
+            }
+        } else {
+            $response = ['status' => false, "errors" => ['User does not exist']];
+            return response($response, 422);
+        }
+
         return response()->json($request->all());
+    }
+
+    public function logout(Request $request)
+    {
+        $token = $request->user()->token();
+        $token->revoke();
+        return response(['status' => true,'message' => 'You have been successfully logged out!'], 200);
     }
 }

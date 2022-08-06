@@ -21,8 +21,6 @@ class CreateProductTable extends Migration
             $table->mediumText('code')->nullable();
             $table->mediumText('name');
             $table->mediumText('cover_image')->nullable();
-            $table->mediumText('unit');
-            $table->decimal('price', 8, 2)->default(0);
             $table->mediumText('description')->nullable();
             $table->enum('status', ['0', '1', '2'])->default('1');
             $table->timestamps();
@@ -36,6 +34,6 @@ class CreateProductTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('product');
+        Schema::dropIfExists('products');
     }
 }
