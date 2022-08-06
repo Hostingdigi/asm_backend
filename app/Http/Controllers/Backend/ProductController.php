@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Domains\Auth\Models\User;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Unit;
 use DataTables;
-use App\Domains\Auth\Models\User, 
-App\Models\Brand, App\Models\Unit, App\Models\ProductVariant, App\Models\Category, App\Models\Product;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -34,9 +38,9 @@ class ProductController extends Controller
                     return ucwords($row->name);
                 })
                 ->addColumn('image', function ($row) {
-                    return !empty($row->cover_image) ? '<img width="65" height="65" src="'.url('img/'.$row->cover_image).'">' : '';
+                    return !empty($row->cover_image) ? '<img width="65" height="65" src="' . url('images/' . $row->cover_image) . '">' : '';
                 })
-                ->addColumn('varants', function ($row)  {
+                ->addColumn('varants', function ($row) {
                     return $row->variants->count();
                 })
                 ->addColumn('status', function ($row) {
@@ -45,7 +49,7 @@ class ProductController extends Controller
                     } else if ($row->status == 0) {
                         return '<b>IN-ACTIVE</b>';
                     }
-                    
+
                 })
                 ->addColumn('actions', function ($row) {
                     if ($row->status == '1') {
@@ -59,7 +63,7 @@ class ProductController extends Controller
 
                     return $actions;
                 })
-                ->rawColumns(['actions','status', 'image'])
+                ->rawColumns(['actions', 'status', 'image'])
                 ->make(true);
         }
 
@@ -78,11 +82,11 @@ class ProductController extends Controller
         $category = Category::select(['id', 'name'])->activeOnly();
         $units = Unit::select(['id', 'name'])->activeOnly();
 
-        return view('backend.product_create',[
+        return view('backend.product_create', [
             'sup' => $sup,
-            'brand'=> $brand,
-            'units'=> $units,
-            'category'=> $category,
+            'brand' => $brand,
+            'units' => $units,
+            'category' => $category,
         ]);
     }
 
@@ -95,14 +99,12 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $productVariants = [];
-        
-
         $coverImage = '';
         if ($request->hasFile('pro_image')) {
-            $destinationPath = 'img/';
-            $files = $request->file('pro_image'); // will get all files                   
+            $destinationPath = 'images/';
+            $files = $request->file('pro_image'); // will get all files
             $coverImage = $files->getClientOriginalName(); //Get file original name
-            $files->move($destinationPath , $coverImage); // move files to destination folder
+            $files->move($destinationPath, $coverImage); // move files to destination folder
             $ext = $files->getClientOriginalExtension();
         }
 
@@ -110,7 +112,7 @@ class ProductController extends Controller
             'code' => !empty($request->pro_code) ? $request->pro_code : '',
             'user_id' => $request->sup,
             'category_id' => $request->category,
-            'brand_id' => !empty($request->brand) ? $request->brand : 1,
+            'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
             'cover_image' => $coverImage,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
@@ -118,14 +120,13 @@ class ProductController extends Controller
 
         $productId = $createClinic->id;
 
-        for($i=1;$i<=$request->var_rows;$i++){
-            if($request->has('var_name_'.$i))
-            {
-                array_push($productVariants,[
+        for ($i = 1; $i <= $request->var_rows; $i++) {
+            if ($request->has('var_name_' . $i)) {
+                array_push($productVariants, [
                     'product_id' => $productId,
-                    'name' => $request->input('var_name_'.$i),
-                    'unit_id' => $request->input('var_unit_'.$i),
-                    'price' => $request->input('var_price_'.$i),
+                    'name' => $request->input('var_name_' . $i),
+                    'unit_id' => $request->input('var_unit_' . $i),
+                    'price' => $request->input('var_price_' . $i),
                 ]);
             }
         }
@@ -166,13 +167,15 @@ class ProductController extends Controller
         $category = Category::select(['id', 'name'])->activeOnly();
         $product = Product::find($id);
         $units = Unit::select(['id', 'name'])->activeOnly();
+        $vars = $product->variants()->where('status', '!=', '2')->get();
 
-        return view('backend.product_edit',[
+        return view('backend.product_edit', [
             'sup' => $sup,
             'product' => $product,
-            'units'=> $units,
-            'brand'=> $brand,
-            'category'=> $category,
+            'units' => $units,
+            'brand' => $brand,
+            'category' => $category,
+            'vars' => $vars,
         ]);
     }
 
@@ -186,29 +189,57 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $currentProd = Product::find($id);
+        $productVariants = [];
+
+        $variantIds = [];
+        for ($i = 1; $i <= $request->var_rows; $i++) {
+            if (!empty($request->input('row_id_' . $i))) {array_push($variantIds, $request->input('row_id_' . $i));}
+        }
 
         $coverImage = trim($currentProd->cover_image);
         if ($request->hasFile('pro_image')) {
-            $destinationPath = 'img/';
-            $files = $request->file('pro_image'); // will get all files                   
+            $destinationPath = 'images/';
+            $files = $request->file('pro_image'); // will get all files
             $coverImage = $files->getClientOriginalName(); //Get file original name
-            $files->move($destinationPath , $coverImage); // move files to destination folder
+            $files->move($destinationPath, $coverImage); // move files to destination folder
             $ext = $files->getClientOriginalExtension();
-            if(!empty($currentProd->cover_image)){
-            unlink('img/'.$currentProd->cover_image);
+            if (!empty($currentProd->cover_image)) {
+                unlink($destinationPath . $currentProd->cover_image);
             }
         }
 
-        $createClinic = Product::where('id',$id)->update([
+        $createClinic = Product::where('id', $id)->update([
             'code' => !empty($request->pro_code) ? $request->pro_code : '',
             'category_id' => $request->category,
-            'brand_id' => !empty($request->brand) ? $request->brand : 0,
+            'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
             'cover_image' => $coverImage,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
         ]);
 
-        ProductVariant::create($productVariants);
+        $productId = $id;
+
+        ProductVariant::whereNotIn('id', $variantIds)->where('product_id', $id)->update(['status' => '2']);
+
+        for ($i = 1; $i <= $request->var_rows; $i++) {
+
+            if ($request->has('var_name_' . $i)) {
+                if ($request->has('row_id_' . $i)) {
+                    ProductVariant::where('id', $request->input('row_id_' . $i))->update([
+                        'name' => $request->input('var_name_' . $i),
+                        'unit_id' => $request->input('var_unit_' . $i),
+                        'price' => $request->input('var_price_' . $i),
+                    ]);
+                } else {
+                    ProductVariant::insert([
+                        'product_id' => $productId,
+                        'name' => $request->input('var_name_' . $i),
+                        'unit_id' => $request->input('var_unit_' . $i),
+                        'price' => $request->input('var_price_' . $i),
+                    ]);
+                }
+            }
+        }
 
         $this->flashData = [
             'status' => 1,
@@ -252,23 +283,32 @@ class ProductController extends Controller
         ]);
     }
 
+    public function updateVariantStatus(Request $request)
+    {
+        ProductVariant::where([['id', '=', $request->variant], ['product_id', '=', $request->productId]])
+            ->update(['status' => $request->status]);
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'Successfully status has been changed',
+        ]);
+    }
+
     public function checkDuplicate(Request $request)
     {
         $exists = true;
 
-        $rowIdTrue = ($request->has('rowId') ? TRUE : FALSE);
+        $rowIdTrue = ($request->has('rowId') ? true : false);
         $rowId = ($request->has('rowId') ? trim($request->rowId) : '');
 
-        if(Product::where([
-            ['name','=',trim($request->pro_name)],
-            ['status','!=','2']
+        if (Product::where([
+            ['name', '=', trim($request->pro_name)],
+            ['status', '!=', '2'],
         ])
-        ->when($rowIdTrue, function($query) use($rowId)
-        {
-            return $query->where('id','!=',$rowId);
-        })
-        ->count() > 0)
-        {
+            ->when($rowIdTrue, function ($query) use ($rowId) {
+                return $query->where('id', '!=', $rowId);
+            })
+            ->count() > 0) {
             $exists = false;
         }
         return response()->json($exists);

@@ -3,11 +3,13 @@
 @section('title', __('Dashboard'))
 
 @section('content')
-    <x-backend.card>
+    <x-backend.card nn="123">
         <x-slot name="header">
             List All Products
+        </x-slot>
 
-            <a href="{{ route('admin.products.create') }}" class="btn btn-success float-right">
+        <x-slot name="headerActions">
+            <a href="{{ route('admin.products.create') }}" class="btn btn-success btn-sm float-right">
                 <i class="fa fa-plus"></i>
                 CREATE
             </a>
@@ -18,18 +20,15 @@
                 <thead class="table-dark">
                     <tr>
                     <th>#</th>
-                    <th>NAME</th>
+                    <th>PRODUCT NAME</th>
                     <th>CATEGORY</th>
                     <th>IMAGE</th>
                     <th>VARIANTS</th>
-                    <!-- <th>UNIT</th> -->
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                     </tr>
                 </thead>
-                <tbody>
-                    
-                </tbody>
+                <tbody></tbody>
                 </table>
         </x-slot>
     </x-backend.card>

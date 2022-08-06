@@ -17,4 +17,9 @@ class ProductVariant extends Model
     {
         return $query->where('status','!=','2')->orderBy('name')->get();
     }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
 }

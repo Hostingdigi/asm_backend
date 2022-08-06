@@ -1,6 +1,6 @@
 <div class="card">
     @if (isset($header))
-        <div class="card-header">
+        <div class="card-header fw-bolder">
             {{ $header }}
 
             @if (isset($headerActions))
