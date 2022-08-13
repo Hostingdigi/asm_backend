@@ -27,6 +27,15 @@
                 :text="__('Products')" />
         </li>
 
+        <li class="c-sidebar-nav-item">
+            <x-utils.link
+                class="c-sidebar-nav-link"
+                :href="route('admin.orders.listOrders')"
+                :active="activeClass(Route::is('admin.orders.*'), 'c-active')"
+                icon="c-sidebar-nav-icon cil-mouse"
+                :text="__('Orders')" />
+        </li>
+
         <li class="c-sidebar-nav-dropdown {{ activeClass(Route::is('admin.masters.*'), 'c-open c-show') }}">
                 <x-utils.link
                     href="#"
@@ -107,7 +116,7 @@
                     @endif
 
                     @if ($logged_in_user->hasAllAccess())
-                        <li class="c-sidebar-nav-item ">
+                        <li class="c-sidebar-nav-item d-none">
                             <x-utils.link
                                 :href="route('admin.auth.role.index')"
                                 class="c-sidebar-nav-link"

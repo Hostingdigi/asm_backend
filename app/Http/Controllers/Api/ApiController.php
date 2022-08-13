@@ -11,6 +11,30 @@ use Illuminate\Http\Request;
 
 class ApiController extends Controller
 {
+    public function listCategories(Request $request)
+    {
+        $data = Category::select('id', 'name', 'image')->where('parent_id', 0)->activeOnly();
+        $data->map(function ($row) {
+            $row['image'] = !empty($row->image) ? asset('storage/'.$row->image) : '';
+            $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
+
+
+            $subCategories->map(function($sRow){
+                $sRow['image'] = !empty($sRow->image) ? asset('storage/'.$sRow->image) : '';
+            });
+
+            $row['subCategories'] = $subCategories;
+            return $row;
+        });
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function listBrands(Request $request)
+    {
+        return response()->json(['data' => Brand::select(['id', 'name'])->activeOnly()]);
+    }
+
     public function productDetails(Request $request, $productId)
     {
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
@@ -50,7 +74,7 @@ class ApiController extends Controller
             return $row;
         });
 
-        return response()->json(['data' => $data]);
+        return response()->json(['status' => true,'data' => $data]);
     }
 
     public function fetchCartItems($userId)
