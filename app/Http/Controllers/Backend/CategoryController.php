@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use DataTables;
 use App\Models\Category;
+use DataTables;
+use Illuminate\Http\Request;
+use Storage;
 
 class CategoryController extends Controller
 {
@@ -22,7 +23,7 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Category::select(['id', 'parent_id', 'name', 'status'])
+            $users = Category::select(['id', 'parent_id', 'name', 'image', 'status'])
                 ->bothInActive();
 
             return Datatables::of($users)
@@ -33,13 +34,16 @@ class CategoryController extends Controller
                 ->addColumn('name', function ($row) {
                     return ucwords($row->name);
                 })
+                ->addColumn('image', function ($row) {
+                    return !empty($row->image) ? '<img width="65" height="65" src="' . asset('storage/' . $row->image) . '" >' : '';
+                })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
                         return '<b class="text-success">ACTIVE</b>';
                     } else if ($row->status == 0) {
                         return '<b>IN-ACTIVE</b>';
                     }
-                    
+
                 })
                 ->addColumn('actions', function ($row) {
                     if ($row->status == '1') {
@@ -53,13 +57,13 @@ class CategoryController extends Controller
 
                     return $actions;
                 })
-                ->rawColumns(['actions','status'])
+                ->rawColumns(['actions', 'status', 'image'])
                 ->make(true);
         }
 
-        $parent = Category::select(['id', 'name', 'status'])->where('parent_id',0)
-                ->bothInActive();
-        return view('backend.categories',['parent' => $parent]);
+        $parent = Category::select(['id', 'name', 'status'])->where('parent_id', 0)
+            ->bothInActive();
+        return view('backend.categories', ['parent' => $parent]);
     }
 
     /**
@@ -80,10 +84,16 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        $imageName = '';
+        if ($request->has('category_image')) {
+            $imageName = Storage::disk('public')->put('images', $request->category_image);
+        }
+
         $createClinic = Category::create([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
-            'description' => ''
+            'image' => $imageName,
+            'description' => '',
         ]);
 
         $this->flashData = [
@@ -115,8 +125,10 @@ class CategoryController extends Controller
      */
     public function edit($id)
     {
+        $data = Category::select(['id', 'parent_id', 'name', 'image'])->find($id);
+        $data->image = !empty($data->image) ? asset('storage/'.$data->image) : '';
         return response()->json([
-            'data' => Category::select(['id', 'parent_id', 'name'])->find($id),
+            'data' => $data
         ]);
     }
 
@@ -129,10 +141,24 @@ class CategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $currentDetails = Category::find($id);
+
+        $oldImageName = $currentDetails->image;
+
+        if ($request->has('category_image') && !empty($request->category_image)) {
+            $imageName = Storage::disk('public')->put('images', $request->category_image);
+            if (!empty($oldImageName) && !Storage::disk('public')->missing($oldImageName)) {
+                Storage::disk('public')->delete($oldImageName);
+            }
+        } else {
+            $imageName = $oldImageName;
+        }
+
         $createClinic = Category::where('id', $id)->update([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
-            'description' => ''
+            'image' => $imageName,
+            'description' => '',
         ]);
 
         $this->flashData = [
@@ -175,5 +201,25 @@ class CategoryController extends Controller
         return response()->json([
             'status' => 1,
         ]);
+    }
+
+    public function checkDuplicate(Request $request)
+    {
+        $exists = true;
+
+        $rowIdTrue = ($request->has('rowId') ? true : false);
+        $rowId = ($request->has('rowId') ? trim($request->rowId) : '');
+
+        if (Category::where([
+            ['name', '=', trim($request->category_name)],
+            ['status', '!=', '2'],
+        ])
+            ->when($rowIdTrue, function ($query) use ($rowId) {
+                return $query->where('id', '!=', $rowId);
+            })
+            ->count() > 0) {
+            $exists = false;
+        }
+        return response()->json($exists);
     }
 }

@@ -1,9 +1,6 @@
 <?php
 
-use App\Http\Controllers\Backend\CategoryController;
 use App\Http\Controllers\Backend\DashboardController;
-use App\Http\Controllers\Backend\ProductController;
-use App\Http\Controllers\Backend\BrandController;
 use Tabuna\Breadcrumbs\Trail;
 
 // All route names are prefixed with 'admin.'.
@@ -24,6 +21,23 @@ Route::prefix('masters')->group(function () {
     //             ->push(__('Masters'), '')
     //             ->push(__('Categories'), '');
     //     });
+
+    // $categoryRoutes = [
+    //     'index' => 'masters.categories.index',
+    //     'store' => 'masters.categories.store',
+    //     'edit' => 'masters.categories.edit',
+    //     'update' => 'masters.categories.update',
+    // ];
+
+    // foreach($categoryRoutes as $cRK => $cRoute){
+    //     Route::get('categories', 'Backend\CategoryController@index')
+    //         ->name($cRoute)
+    //         ->breadcrumbs(function (Trail $trail) {
+    //             $trail->parent('admin.auth.role.index')
+    //                 ->push(__('Create Role'), route('admin.auth.role.create'));
+    //         });
+    // }
+
     Route::resource('categories', 'Backend\CategoryController')->names([
         'index' => 'masters.categories.index',
         'store' => 'masters.categories.store',
@@ -52,9 +66,9 @@ Route::prefix('masters')->group(function () {
     Route::post('brands/check-duplicate', 'Backend\BrandController@checkDuplicate')->name('masters.brands.checkDuplicate');
 
     // Route::resource('brands', BrandController::class)->names([
-        // 'store' => 'mstr.department.store',
-        // 'edit' => 'mstr.department.edit',
-        // 'update' => 'mstr.department.update',
+    // 'store' => 'mstr.department.store',
+    // 'edit' => 'mstr.department.edit',
+    // 'update' => 'mstr.department.update',
     // ]);
 
     Route::resource('units', 'Backend\UnitController')->names([
@@ -84,12 +98,22 @@ Route::prefix('settings')->group(function () {
 
 });
 
-    Route::resource('products', 'Backend\ProductController')->names([
-        'index' => 'products.index',
-        'store' => 'products.store',
-        'edit' => 'products.edit',
-        'update' => 'products.update',
-    ]);
-    Route::get('products/update/status/{userId}/{statusCode}', 'Backend\ProductController@updateStatus')->name('products.updateStatus');
-    Route::post('products/check-duplicate', 'Backend\ProductController@checkDuplicate')->name('products.checkDuplicate');
-    Route::post('products/update-variant-status', 'Backend\ProductController@updateVariantStatus')->name('products.updateVariantStatus');
+Route::resource('products', 'Backend\ProductController')->names([
+    'index' => 'products.index',
+    'store' => 'products.store',
+    'edit' => 'products.edit',
+    'update' => 'products.update',
+]);
+Route::get('products/update/status/{userId}/{statusCode}', 'Backend\ProductController@updateStatus')->name('products.updateStatus');
+Route::post('products/check-duplicate', 'Backend\ProductController@checkDuplicate')->name('products.checkDuplicate');
+Route::post('products/update-variant-status', 'Backend\ProductController@updateVariantStatus')->name('products.updateVariantStatus');
+
+Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
+
+    Route::get('/', 'Backend\OrderController@listOrders')->name('listOrders')->breadcrumbs(function (Trail $trail) {
+        $trail->push(__('Home'), route('admin.dashboard'))
+            ->push(__('Orders'), '');
+    });
+    Route::post('orders/{orderId}', 'Backend\OrderController@orderDetail')->name('orderDetail');
+
+});

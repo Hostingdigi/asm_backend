@@ -18,29 +18,13 @@ use App\Http\Controllers\Api\ApiAuthController;
 //});
 
 use App\Http\Controllers\Api\ApiController;
-use App\Models\Brand;
-use App\Models\Category;
 
 Route::post('register', [ApiAuthController::class, 'register']);
 Route::post('login', [ApiAuthController::class, 'login']);
 
-Route::get('categories', function () {
 
-    $data = Category::select('id', 'name')->where('parent_id', 0)->activeOnly();
-
-    $data = $data->map(function ($row) {
-
-        $row['subCategories'] = Category::select('id', 'name')->where('parent_id', $row->id)->activeOnly();
-
-        return $row;
-    });
-
-    return response()->json(['data' => $data]);
-});
-
-Route::get('brands', function () {
-    return response()->json(['data' => Brand::select(['id', 'name'])->activeOnly()]);
-});
+Route::get('categories', [ApiController::class, 'listCategories']);
+Route::get('brands', [ApiController::class, 'listBrands']);
 
 Route::prefix('products')->group(function () {
 
