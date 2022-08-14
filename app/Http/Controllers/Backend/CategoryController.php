@@ -23,7 +23,7 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Category::select(['id', 'parent_id', 'name', 'image', 'status'])
+            $users = Category::select(['id', 'parent_id', 'name', 'image', 'status'])->orderBy('id','desc')
                 ->bothInActive();
 
             return Datatables::of($users)
@@ -35,7 +35,7 @@ class CategoryController extends Controller
                     return ucwords($row->name);
                 })
                 ->addColumn('image', function ($row) {
-                    return !empty($row->image) ? '<img width="65" height="65" src="' . asset('storage/' . $row->image) . '" >' : '';
+                    return !empty($row->image) ? '<img class="img-thumbnail" width="75" height="75" src="' . asset('assets/'.$row->image) . '" >' : '';
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
@@ -86,7 +86,7 @@ class CategoryController extends Controller
     {
         $imageName = '';
         if ($request->has('category_image')) {
-            $imageName = Storage::disk('public')->put('images', $request->category_image);
+            $imageName = Storage::put('images', $request->category_image);
         }
 
         $createClinic = Category::create([
@@ -126,7 +126,7 @@ class CategoryController extends Controller
     public function edit($id)
     {
         $data = Category::select(['id', 'parent_id', 'name', 'image'])->find($id);
-        $data->image = !empty($data->image) ? asset('storage/'.$data->image) : '';
+        $data->image = !empty($data->image) ? asset('assets/'.$data->image) : '';
         return response()->json([
             'data' => $data
         ]);
@@ -146,9 +146,9 @@ class CategoryController extends Controller
         $oldImageName = $currentDetails->image;
 
         if ($request->has('category_image') && !empty($request->category_image)) {
-            $imageName = Storage::disk('public')->put('images', $request->category_image);
-            if (!empty($oldImageName) && !Storage::disk('public')->missing($oldImageName)) {
-                Storage::disk('public')->delete($oldImageName);
+            $imageName = Storage::put('images', $request->category_image);
+            if (!empty($oldImageName) && !Storage::missing($oldImageName)) {
+                Storage::delete($oldImageName);
             }
         } else {
             $imageName = $oldImageName;

@@ -16,7 +16,7 @@ class CreateOrderTable extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('payment_id')->constrained('payments');
+            $table->unsignedBigInteger('payment_id');
             $table->decimal('total_amount', 8, 2)->default(0);
             $table->decimal('tax_amount', 8, 2)->default(0);
             $table->decimal('amount', 8, 2)->default(0);

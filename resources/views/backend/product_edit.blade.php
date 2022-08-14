@@ -52,7 +52,7 @@
                         <label class="form-label fw-bolder" for="pro_code">Product Code</label>
                         <input class="form-control" value="{{ trim($product->code) }}" name="pro_code" type="text" placeholder="Enter product code">
                     </div>
-                    <div class="col-6">
+                    <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="pro_name">Name</label>
                         <input class="form-control" value="{{ trim($product->name) }}" required name="pro_name" type="name" placeholder="Enter product name">
@@ -63,10 +63,15 @@
                         <label class="form-label fw-bolder" for="pro_image">Cover Image</label>
                         <input class="" name="pro_image" type="file">
                         @if(!empty($product->cover_image))
-                        <br>
-                        <br>
-                        <img width="65" height="65" src="{{ url('images/'.$product->cover_image) }}">
+                        <img class="img-thumbnail mt-2" width="75" height="75" src="{{ asset('assets/'.$product->cover_image) }}">
                         @endif
+                    </div>
+
+                    <div class="col">
+                        <br>
+                        <label class="form-label fw-bolder" for="pro_image">Additional Images</label>
+                        <br>
+                        <input class="" name="add_image[]" multiple type="file">
                     </div>
                 </div>
                 <div class="row">
@@ -127,16 +132,40 @@
                 <br>
                 @endforeach
                 <hr>
-                <div class="row">
-                    <div class="col" align="right">
-                        <br>
-                        <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-check"></i> Save</button>
-                    </div>
-                </div>
+        </x-slot>
 
+        <x-slot name="footer">
+            <button type="submit" class="btn btn-success btn-sm float-right"><i class="fa fa-check"></i> Save</button>
             </form>
         </x-slot>
+
     </x-backend.card>
+
+    @if(count($addImages)>0)
+    <x-backend.card>
+        <x-slot name="header">
+            Manage Additional Images
+        </x-slot>
+        <x-slot name="body">
+            @foreach($addImages as $img)
+            <div class="row mt-3" id="img_row_{{ $img->id }}">
+                <div class="col-2">
+                    <img src="{{ asset('assets/'.$img->file_name) }}" width="75" height="75" class="img-thumbnail" alt="">
+                </div>
+                <div class="col-3">
+                    <label class="form-label fw-bolder">Display Order</label>
+                    <input data-id="{{ $img->id }}" type="number" min="1" class="form-control display_order" name="display_order" value="{{ $img->display_order }}">
+                    <small id="upd_txt_{{ $img->id }}" style="display:none;" class="text-success fw-semibold">Updated</small>
+                </div>
+                <div class="col">
+                    <button type="button" data-id="{{ $img->id }}" class="btn btn-danger btn-sm removeImg" style="margin-top:31px;"><i class="fa fa-minus"></i> REMOVE</button>
+                </div>
+            </div>
+            @endforeach
+        </x-slot>
+    </x-backend.card>
+    @endif
+
 @endsection
 
 @push('after-scripts')
@@ -184,6 +213,19 @@
             $("#main_row_"+$(this).data("rowid")).remove();
         });
 
+        $(".removeImg").on("click", function(e){
+            var imgRow = $(this).data("id");
+            var updateData = {
+                _token:"{{ csrf_token() }}",
+                productId:"{{ $product->id }}",
+                variant:imgRow
+            };
+            $.post("{{route('admin.products.removeProImage')}}",updateData,function(result){
+                alert(result.message);
+                $("#img_row_"+imgRow).remove();
+            },'JSON');
+        });
+
         $("body").on("click",".changeVarRow", function(){
             var isStatus = $(this).data('status');
             var rowId = $(this).data('rowid');
@@ -199,6 +241,23 @@
                 $((isStatus==1 ? "#isStatusActive_" : "#isStatusInactive_")+rowId).removeClass('d-none');
                 $((isStatus==0 ? "#isStatusActiveBtn_" : "#isStatusInactiveBtn_")+rowId).removeClass('d-none');
             },'JSON');
+        });
+
+        $(".display_order").on("change", function(e){
+            var imgRow = $(this).data("id");
+            $("#upd_txt_"+imgRow).slideDown();
+            var updateData = {
+                _token:"{{ csrf_token() }}",
+                productId:"{{ $product->id }}",
+                variant:imgRow,
+                display : $(this).val()
+            };
+            $.post("{{route('admin.products.updateDisplayProImage')}}",updateData,function(result){
+                setTimeout(function(){
+                    $("#upd_txt_"+imgRow).slideUp();
+                },500);
+            },'JSON');
+            
         });
 
         $("#addRow").on("click", function(e){
