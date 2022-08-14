@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreatePaymentsTable extends Migration
+class UpdateOrdersFkey extends Migration
 {
     /**
      * Run the migrations.
@@ -13,11 +13,8 @@ class CreatePaymentsTable extends Migration
      */
     public function up()
     {
-        Schema::create('payments', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('order_id');
-            $table->enum('status', ['0', '1'])->default('1');
-            $table->timestamps();
+        Schema::table('orders', function (Blueprint $table) {
+            $table->foreign('payment_id')->references('id')->on('payments');
         });
     }
 
@@ -28,6 +25,8 @@ class CreatePaymentsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('payments');
+        Schema::table('orders', function (Blueprint $table) {
+            //
+        });
     }
 }

@@ -77,7 +77,7 @@
                                 <label class="col-form-label">Image</label><br>
                                 <input type="file" name="category_image" />
                                 <br>
-                                <img src="" id="pImg" class="d-none" width="85" height="85" >
+                                <img src="" id="pImg" class="d-none c-avatars-stack mt-2 img-thumbnail" width="85" height="85" >
                             </div>
                         </div>
                         <div class="modal-footer">

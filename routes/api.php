@@ -33,7 +33,7 @@ Route::prefix('products')->group(function () {
 
 });
 
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api','user_accessible'])->group(function () {
 
     //
     Route::get('logout', [ApiAuthController::class, 'logout']);

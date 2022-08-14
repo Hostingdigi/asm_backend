@@ -59,9 +59,16 @@
                     
                     <div class="col">
                         <br>
-                        <label class="form-label fw-bolder" for="pro_image">Cover Image</label>
+                        <label class="form-label fw-bolder" for="pro_image">Main Image</label>
                         <br>
                         <input class="" name="pro_image" type="file">
+                    </div>
+
+                    <div class="col">
+                        <br>
+                        <label class="form-label fw-bolder" for="pro_image">Additional Images</label>
+                        <br>
+                        <input class="" name="add_image[]" multiple type="file">
                     </div>
                 </div>
                 <div class="row">

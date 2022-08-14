@@ -3,6 +3,13 @@
 use App\Http\Controllers\Backend\DashboardController;
 use Tabuna\Breadcrumbs\Trail;
 
+
+Route::get('run_artisan', function () {
+    // \Artisan::call('cache:clear');
+    \Artisan::call('storage:link');
+    dd("Done");
+});
+
 // All route names are prefixed with 'admin.'.
 Route::redirect('/', '/admin/dashboard', 301);
 Route::get('dashboard', [DashboardController::class, 'index'])
@@ -107,6 +114,8 @@ Route::resource('products', 'Backend\ProductController')->names([
 Route::get('products/update/status/{userId}/{statusCode}', 'Backend\ProductController@updateStatus')->name('products.updateStatus');
 Route::post('products/check-duplicate', 'Backend\ProductController@checkDuplicate')->name('products.checkDuplicate');
 Route::post('products/update-variant-status', 'Backend\ProductController@updateVariantStatus')->name('products.updateVariantStatus');
+Route::post('products/remove-pro-image', 'Backend\ProductController@removeProImage')->name('products.removeProImage');
+Route::post('products/change-pro-image-order', 'Backend\ProductController@updateDisplayProImage')->name('products.updateDisplayProImage');
 
 Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
 

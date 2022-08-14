@@ -11,6 +11,10 @@ use App\Http\Controllers\LocaleController;
 // Switch between the included languages
 Route::get('lang/{lang}', [LocaleController::class, 'change'])->name('locale.change');
 
+Route::get('logout', function(){
+    auth()->logout();
+    return redirect('/');
+});
 /*
  * Frontend Routes
  */

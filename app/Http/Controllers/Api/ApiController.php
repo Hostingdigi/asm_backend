@@ -15,12 +15,12 @@ class ApiController extends Controller
     {
         $data = Category::select('id', 'name', 'image')->where('parent_id', 0)->activeOnly();
         $data->map(function ($row) {
-            $row['image'] = !empty($row->image) ? asset('storage/'.$row->image) : '';
+            $row['image'] = !empty($row->image) ? asset('assets/'.$row->image) : '';
             $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
 
 
             $subCategories->map(function($sRow){
-                $sRow['image'] = !empty($sRow->image) ? asset('storage/'.$sRow->image) : '';
+                $sRow['image'] = !empty($sRow->image) ? asset('assets/'.$sRow->image) : '';
             });
 
             $row['subCategories'] = $subCategories;
@@ -40,6 +40,8 @@ class ApiController extends Controller
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+        },'images' => function ($query) {
+            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order','asc');
         }])->where('id', $productId)->activeOnly();
 
         $data = $data->map(function ($row) {
@@ -49,6 +51,13 @@ class ApiController extends Controller
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
             $row['image'] = !empty($row->image) ? url('img/' . $row->image) : '';
 
+            $row['images'] = $row['images']->map(function($img){
+                
+                $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
+                unset($img['product_id']);
+                return $img;
+            });
+            
             unset($row['supplier']);
             return $row;
         });
@@ -61,6 +70,8 @@ class ApiController extends Controller
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+        },'images' => function ($query) {
+            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order','asc');
         }])->activeOnly();
 
         $data = $data->map(function ($row) {
@@ -68,7 +79,14 @@ class ApiController extends Controller
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['image'] = !empty($row->image) ? url('img/' . $row->image) : '';
+            $row['image'] = !empty($row->image) ? asset('assets/' . $row->image) : '';
+
+            $row['images'] = $row['images']->map(function($img){
+                
+                $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
+                unset($img['product_id']);
+                return $img;
+            });
 
             unset($row['supplier']);
             return $row;
