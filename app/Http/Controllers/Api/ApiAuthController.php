@@ -30,7 +30,7 @@ class ApiAuthController extends Controller
             'name' => 'required|max:255',
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
-            'mobile' => 'required|digits:10',
+            'mobile' => 'nullable|digits:10',
         ];
         $validator = Validator::make($request->all(), $rules);
 
@@ -47,8 +47,9 @@ class ApiAuthController extends Controller
 
             return response([
                 'status' => false,
-                'errors' => $formatedErrors,
-            ], 422);
+                'message' => $formatedErrors,
+                'data' => null,
+            ], 200);
         }
 
         $userData = Arr::only($request->all(), array_keys($rules));
@@ -66,8 +67,11 @@ class ApiAuthController extends Controller
         // $token = $user->createToken('API Token')->accessToken;
 
         // return response([ 'user' => $user, 'token' => $token]);
+        unset($user['roles']);
 
-        return response()->json(['status' => true, 'message' => 'Successfully user has been created', 'token' => $token, 'data' => $user]);
+        return response()->json(['status' => true, 'message' => 'Successfully user has been created',
+            'data' => ['token' => $token, 'user' => collect($user)->only(['id', 'name', 'email', 'avatar'])],
+        ]);
     }
 
     public function login(Request $request)
@@ -77,28 +81,30 @@ class ApiAuthController extends Controller
             'password' => 'required',
         ]);
         if ($validator->fails()) {
-            return response(['status' => false, 'errors' => $validator->errors()->all()], 422);
+            return response(['status' => false, 'message' => $validator->errors()->all(), 'data' => null], 200);
         }
         $user = User::where('email', $request->email)->first();
         if ($user) {
             if (Hash::check($request->password, $user->password)) {
 
                 if (!auth()->attempt($request->all())) {
-                    return response(['status' => false, 'errors' => ['Incorrect Details.
+                    return response(['status' => false, 'message' => ['Incorrect Details.
                             Please try again', ]]);
                 }
 
                 $token = auth()->user()->createToken('API Token')->accessToken;
                 // $token = 1;// $user->createToken('API Token')->accessToken;
-                $response = ['status' => true, 'token' => $token, 'user' => [collect($user)->only(['id', 'name', 'email', 'avatar'])]];
+                $response = ['status' => true, 'message' => 'Successfully logged in.', 'data' => [
+                    'token' => $token, 'user' => collect($user)->only(['id', 'name', 'email', 'avatar'])],
+                ];
                 return response($response, 200);
             } else {
-                $response = ['status' => false, "errors" => ["Password mismatch"]];
-                return response($response, 422);
+                $response = ['status' => false, "message" => ["Password mismatch"], 'data' => null];
+                return response($response, 200);
             }
         } else {
-            $response = ['status' => false, "errors" => ['User does not exist']];
-            return response($response, 422);
+            $response = ['status' => false, "message" => ['User does not exist'], 'data' => null];
+            return response($response, 200);
         }
 
         return response()->json($request->all());
@@ -108,6 +114,6 @@ class ApiAuthController extends Controller
     {
         $token = $request->user()->token();
         $token->revoke();
-        return response(['status' => true,'message' => 'You have been successfully logged out!'], 200);
+        return response(['status' => true, 'message' => 'You have been successfully logged out!', 'data' => null], 200);
     }
 }

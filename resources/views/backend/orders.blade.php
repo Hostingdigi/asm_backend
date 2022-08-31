@@ -72,10 +72,10 @@
             ajax: "{{ route('admin.orders.listOrders') }}",
             columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex' },
-                    { data: 'orderId', name: 'orderId' },
+                    { data: 'order_no', name: 'order_no' },
                     { data: 'customer', name: 'customer' },
-                    { data: 'totalAmount', name: 'totalAmount' },
-                    { data: 'orderedOn', name: 'orderedOn' },
+                    { data: 'total', name: 'total' },
+                    { data: 'ordered', name: 'ordered' },
                     { data: 'status', name: 'status' },
                     { data: 'actions', name: 'actions' }
                 ]

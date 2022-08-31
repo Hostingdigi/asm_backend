@@ -22,21 +22,32 @@ use App\Http\Controllers\Api\ApiController;
 Route::post('register', [ApiAuthController::class, 'register']);
 Route::post('login', [ApiAuthController::class, 'login']);
 
-
 Route::get('categories', [ApiController::class, 'listCategories']);
 Route::get('brands', [ApiController::class, 'listBrands']);
+Route::get('promocodes', [ApiController::class, 'listPromocodes']);
 
 Route::prefix('products')->group(function () {
+
+    Route::middleware(['auth:api', 'user_accessible'])->group(function () {
+        Route::post('add-to-wishlist', [ApiController::class, 'addToWishlist']);
+        Route::get('list-wishlist', [ApiController::class, 'ListWishlist']);
+    });
 
     Route::post('/', [ApiController::class, 'listProducts']);
     Route::get('/{productId}', [ApiController::class, 'productDetails']);
 
 });
 
-Route::middleware(['auth:api','user_accessible'])->group(function () {
+Route::middleware(['auth:api', 'user_accessible'])->group(function () {
 
     //
     Route::get('logout', [ApiAuthController::class, 'logout']);
+
+    Route::post('save-address', [ApiController::class, 'saveAddress']);
+    Route::get('address', [ApiController::class, 'getAddress']);
+
+    Route::post('create-order', [ApiController::class, 'createOrder']);
+    Route::post('my-orders', [ApiController::class, 'listMyOrders']);
 
     //Cart
     Route::prefix('cart')->group(function () {

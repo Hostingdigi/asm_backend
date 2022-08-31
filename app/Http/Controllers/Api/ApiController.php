@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
-use App\Models\Cart;
-use App\Models\Category;
-use App\Models\Product;
+use App\Models\Brand, App\Models\Cart;
+use App\Models\CartAddress, App\Models\Category, App\Models\Order;
+use App\Models\Payment, App\Models\Product, App\Models\ProductWishlist, App\Models\OrderItem;
 use Illuminate\Http\Request;
 
 class ApiController extends Controller
@@ -15,24 +14,23 @@ class ApiController extends Controller
     {
         $data = Category::select('id', 'name', 'image')->where('parent_id', 0)->activeOnly();
         $data->map(function ($row) {
-            $row['image'] = !empty($row->image) ? asset('assets/'.$row->image) : '';
+            $row['image'] = !empty($row->image) ? asset('assets/' . $row->image) : '';
             $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
 
-
-            $subCategories->map(function($sRow){
-                $sRow['image'] = !empty($sRow->image) ? asset('assets/'.$sRow->image) : '';
+            $subCategories->map(function ($sRow) {
+                $sRow['image'] = !empty($sRow->image) ? asset('assets/' . $sRow->image) : '';
             });
 
             $row['subCategories'] = $subCategories;
             return $row;
         });
 
-        return response()->json(['data' => $data]);
+        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
     }
 
     public function listBrands(Request $request)
     {
-        return response()->json(['data' => Brand::select(['id', 'name'])->activeOnly()]);
+        return response()->json(['status' => true, 'message' => '', 'data' => Brand::select(['id', 'name'])->activeOnly()]);
     }
 
     public function productDetails(Request $request, $productId)
@@ -40,8 +38,8 @@ class ApiController extends Controller
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
-        },'images' => function ($query) {
-            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order','asc');
+        }, 'images' => function ($query) {
+            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
         }])->where('id', $productId)->activeOnly();
 
         $data = $data->map(function ($row) {
@@ -51,18 +49,18 @@ class ApiController extends Controller
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
             $row['image'] = !empty($row->image) ? url('img/' . $row->image) : '';
 
-            $row['images'] = $row['images']->map(function($img){
-                
+            $row['images'] = $row['images']->map(function ($img) {
+
                 $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
                 unset($img['product_id']);
                 return $img;
             });
-            
+
             unset($row['supplier']);
             return $row;
         });
 
-        return response()->json(['data' => $data]);
+        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
     }
 
     public function listProducts(Request $request)
@@ -70,8 +68,8 @@ class ApiController extends Controller
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
-        },'images' => function ($query) {
-            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order','asc');
+        }, 'images' => function ($query) {
+            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
         }])->activeOnly();
 
         $data = $data->map(function ($row) {
@@ -81,8 +79,8 @@ class ApiController extends Controller
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
             $row['image'] = !empty($row->image) ? asset('assets/' . $row->image) : '';
 
-            $row['images'] = $row['images']->map(function($img){
-                
+            $row['images'] = $row['images']->map(function ($img) {
+
                 $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
                 unset($img['product_id']);
                 return $img;
@@ -92,7 +90,7 @@ class ApiController extends Controller
             return $row;
         });
 
-        return response()->json(['status' => true,'data' => $data]);
+        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
     }
 
     public function fetchCartItems($userId)
@@ -126,7 +124,7 @@ class ApiController extends Controller
     public function listCartItems(Request $request)
     {
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json(['status' => true, 'data' => [
+        return response()->json(['status' => true, 'message' => '', 'data' => [
             'total_amount' => $fetchCartDetails['cartTotal'],
             'cart_items' => $fetchCartDetails['cartItems'],
         ]]);
@@ -195,7 +193,7 @@ class ApiController extends Controller
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
         return response()->json([
             'status' => true,
-            'message' => 'Successfully item has been'.($isRemoved == 1 ? 'removed' : 'updated'),
+            'message' => 'Successfully item has been ' . ($isRemoved == 1 ? 'removed' : 'updated'),
             'data' => [
                 'total_amount' => $fetchCartDetails['cartTotal'],
                 'cart_items' => $fetchCartDetails['cartItems'],
@@ -229,5 +227,227 @@ class ApiController extends Controller
                 'total_amount' => $fetchCartDetails['cartTotal'],
                 'cart_items' => $fetchCartDetails['cartItems'],
             ]]);
+    }
+
+    public function saveAddress(Request $request)
+    {
+        $billing = $request->address;
+
+        $shippingAddress = [
+            "user_id" => auth()->id(),
+            "name" => $billing['name'],
+            "email_address" => $billing['email'],
+            "mobile" => $billing['mobile'],
+            "address_type" => '1',
+            "address" => $billing['address'],
+            "city" => $billing['city'],
+            "state" => $billing['state'],
+            "zipcode" => $billing['zipcode'],
+            "country_id" => $billing['country_id'],
+        ];
+
+        if (CartAddress::where('user_id', auth()->id())->count()) {
+            CartAddress::where([['user_id', '=', auth()->id()], ['address_type', '=', '1']])->update($shippingAddress);
+        } else {
+            CartAddress::create($shippingAddress);
+        }
+
+        return response()->json(['status' => true, 'message' => 'Successfully address has been saved',
+            'data' => $this->getAddress($request)->original['data']]);
+    }
+
+    public function getAddress(Request $request)
+    {
+        return response()->json(['status' => true, 'message' => '', 'data' => CartAddress::where([['user_id', '=', auth()->id()], ['address_type', '=', '1']])->first(),
+        ]);
+
+    }
+
+    public function listMyOrders(Request $request)
+    {
+        $orders = Order::where('user_id',auth()->id())->get();
+        return response()->json(['status' => true, 'message' => '', 'data' => $orders]);
+
+    }
+
+    public function createOrder(Request $request)
+    {
+        $cartItems = Cart::where('user_id', auth()->id())->get();
+
+        $cartAmount = $taxAmount = $totalAmount = $shippingAmount = $couponAmount = $orderNo = 0;
+        list($couponCode, $billingDetails, $shippingDetails, $orderItems) = [[], [], [], []];
+        $addressFields = ['name', 'email_address', 'mobile', 'address', 'city', 'state', 'zipcode', 'country_id'];
+
+        $shippingDetails = CartAddress::where([['user_id', '=', auth()->id()], ['address_type', '=', '1']])
+            ->select($addressFields)->first()->toArray();
+
+        foreach ($cartItems as $key => $value) {
+
+            $product = Product::where([
+                ['status', '=', '1'],
+                ['id', '=', $value->product_id],
+            ])->first();
+
+            if ($product) {
+
+                $price = $value->variant->price;
+                $productDetails = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category_id' => $product->category_id,
+                    'category_name' => $product->category->name,
+                    'brand_id' => $product->brand_id,
+                    'brand_name' => $product->brand->name ?? '',
+                    'image' => !empty($product->cover_image) ? url($product->cover_image) : '',
+                    'variant_name' => $value->variant->name,
+                    'unit_name' => $value->variant->unit->name,
+                ];
+
+                $orderItems[] = [
+                    'order_id' => 0,
+                    'product_id' => $product->id,
+                    'variant_id' => $value->variant_id,
+                    'quantity' => $value->quantity,
+                    'price' => $price,
+                    'total_price' => $price * $value->quantity,
+                    'product_details' => serialize($productDetails),
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ];
+                $cartAmount += $price * $value->quantity;
+            }
+        }
+
+        $totalAmount = $cartAmount;
+
+        if ($totalAmount > 0) {
+
+            $orderNo = sprintf('%05d', Order::count());
+
+            //Create order
+            $orderData = [
+                'order_no' => $orderNo,
+                'user_id' => auth()->id(),
+                'total_amount' => $totalAmount,
+                'tax_amount' => $taxAmount,
+                'amount' => $cartAmount,
+                'shipping_amount' => $shippingAmount,
+                'coupon_amount' => $couponAmount,
+                'coupon_code' => serialize($couponCode),
+                'billing_details' => serialize($billingDetails),
+                'shipping_details' => serialize($shippingDetails),
+                'ordered_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+            ];
+            $order = Order::create($orderData);
+
+            //Update payment
+            $payment = Payment::create([
+                'order_type' => 'cod',
+                'order_id' => $order->id,
+                'status' => (string) rand(0, 1),
+                'payment_response' => serialize([])
+            ]);
+            Order::where('id', $order->id)->update(['payment_id' => $payment->id]);
+
+            //Assign order id to items
+            array_walk_recursive($orderItems, function (&$item, $key) use($order) {
+                if ($key == 'order_id') {
+                    $item = $order->id;
+                }
+            });
+            OrderItem::insert($orderItems);
+
+            //Clear cart items
+            Cart::where('user_id', auth()->id())->delete();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Successfully order has been created',
+                'data' => [
+                    'order_id '=> $order->id
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Cart items are not available',
+            'data' => null
+        ]);
+    }
+
+    public function addToWishlist(Request $request)
+    {
+        ProductWishlist::firstOrCreate([
+            'user_id' => auth()->id(),
+            'product_id' => $request->product_id,
+        ]);
+
+        $data = $this->ListWishlist($request)->original['data'];
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Successfully product has been added to wishlist',
+            'data' => $data,
+        ]);
+    }
+
+    public function ListWishlist(Request $request)
+    {
+        $data = ProductWishlist::with(['product' => function ($query) {
+            $query->select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
+                'description')->with('variants:id,product_id,name,price,unit_id');
+        }])->latest()->get();
+
+        $products = [];
+
+        foreach ($data as $key => $row) {
+
+            $product = $row->product;
+            $product->supplier_name = $product->supplier->name;
+            $product->category_name = Category::find($product->category_id)->name;
+            $product->brand_name = !empty($product->brand_id) ? Brand::find($product->brand_id)->name : '';
+
+            $product->image = !empty($product->image) ? asset('assets/' . $product->image) : '';
+            array_push($products, $row->product);
+            unset($product->supplier);
+
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'data' => $products,
+        ]);
+    }
+
+    public function listPromocodes(Request $request)
+    {
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'data' => [
+                [
+                    'id' => 1,
+                    'image' => 'https://images.pexels.com/photos/11591858/pexels-photo-11591858.jpeg?auto=compress&cs=tinysrgb&w=600',
+                ],
+                [
+                    'id' => 2,
+                    'image' => 'https://images.pexels.com/photos/5782239/pexels-photo-5782239.jpeg?auto=compress&cs=tinysrgb&w=600',
+                ],
+                [
+                    'id' => 3,
+                    'image' => 'https://images.pexels.com/photos/5920641/pexels-photo-5920641.jpeg?auto=compress&cs=tinysrgb&w=600',
+                ],
+                [
+                    'id' => 4,
+                    'image' => 'https://images.pexels.com/photos/5272931/pexels-photo-5272931.jpeg?auto=compress&cs=tinysrgb&w=600',
+                ],
+                [
+                    'id' => 5,
+                    'image' => 'https: //images.pexels.com/photos/5273011/pexels-photo-5273011.jpeg?auto=compress&cs=tinysrgb&w=600',
+                ],
+            ],
+        ]);
     }
 }
