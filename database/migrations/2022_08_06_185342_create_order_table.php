@@ -15,15 +15,15 @@ class CreateOrderTable extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
+            $table->mediumText('order_no')->nullable();
             $table->foreignId('user_id')->constrained('users');
-            $table->unsignedBigInteger('payment_id');
+            $table->unsignedBigInteger('payment_id')->nullable();
             $table->decimal('total_amount', 8, 2)->default(0);
             $table->decimal('tax_amount', 8, 2)->default(0);
             $table->decimal('amount', 8, 2)->default(0);
             $table->decimal('shipping_amount', 8, 2)->default(0);
             $table->decimal('coupon_amount', 8, 2)->default(0);
             $table->mediumText('coupon_code')->nullable();
-            $table->mediumText('coupon_code_details')->nullable();
             $table->mediumText('billing_details')->nullable();
             $table->mediumText('shipping_details')->nullable();
             $table->dateTime('ordered_at');
