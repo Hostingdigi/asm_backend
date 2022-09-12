@@ -18,6 +18,7 @@ class CreateCategory extends Migration
             $table->bigInteger('parent_id')->default(0);
             $table->mediumText('name');
             $table->mediumText('image')->nullable();
+            $table->mediumText('banner_image')->nullable();
             $table->mediumText('description');
             $table->enum('status', ['0', '1', '2'])->default('1');
             $table->timestamps();

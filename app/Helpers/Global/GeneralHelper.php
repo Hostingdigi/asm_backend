@@ -2,6 +2,22 @@
 
 use Carbon\Carbon;
 
+if (! function_exists('returnApiResponse')) {
+    /**
+     * Helper to grab the application name.
+     *
+     * @return mixed
+     */
+    function returnApiResponse($status = true,$message = '',$data = null)
+    {
+        return response()->json([
+            'status' => $status,
+            'message' => $message,
+            'data' => $data
+        ]);
+    }
+}
+
 if (! function_exists('appName')) {
     /**
      * Helper to grab the application name.

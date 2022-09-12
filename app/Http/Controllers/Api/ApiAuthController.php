@@ -47,9 +47,9 @@ class ApiAuthController extends Controller
 
             return response([
                 'status' => false,
-                'message' => $formatedErrors,
+                'message' => 'validation_error',
                 'data' => null,
-            ], 200);
+            ]);
         }
 
         $userData = Arr::only($request->all(), array_keys($rules));
@@ -81,15 +81,14 @@ class ApiAuthController extends Controller
             'password' => 'required',
         ]);
         if ($validator->fails()) {
-            return response(['status' => false, 'message' => $validator->errors()->all(), 'data' => null], 200);
+            return response(['status' => false, 'message' => 'validation_error', 'data' => null]);
         }
         $user = User::where('email', $request->email)->first();
         if ($user) {
             if (Hash::check($request->password, $user->password)) {
 
                 if (!auth()->attempt($request->all())) {
-                    return response(['status' => false, 'message' => ['Incorrect Details.
-                            Please try again', ]]);
+                    return response(['status' => false, 'message' => 'Incorrect Details. Please try again']);
                 }
 
                 $token = auth()->user()->createToken('API Token')->accessToken;
@@ -97,14 +96,14 @@ class ApiAuthController extends Controller
                 $response = ['status' => true, 'message' => 'Successfully logged in.', 'data' => [
                     'token' => $token, 'user' => collect($user)->only(['id', 'name', 'email', 'avatar'])],
                 ];
-                return response($response, 200);
+                return response($response);
             } else {
-                $response = ['status' => false, "message" => ["Password mismatch"], 'data' => null];
-                return response($response, 200);
+                $response = ['status' => false, 'message' => 'Password mismatch', 'data' => null];
+                return response($response);
             }
         } else {
-            $response = ['status' => false, "message" => ['User does not exist'], 'data' => null];
-            return response($response, 200);
+            $response = ['status' => false, 'message' => 'User does not exist', 'data' => null];
+            return response($response);
         }
 
         return response()->json($request->all());
@@ -114,6 +113,29 @@ class ApiAuthController extends Controller
     {
         $token = $request->user()->token();
         $token->revoke();
-        return response(['status' => true, 'message' => 'You have been successfully logged out!', 'data' => null], 200);
+        return response(['status' => true, 'message' => 'You have been successfully logged out!', 'data' => null]);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        return response(['status' => true, 'message' => 'Your request has been processing, please check your inbox.', 'data' => null]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $rules = [
+            'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
+        ];
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return returnApiResponse(false,'validation_error');
+        }
+
+        User::where('id',auth()->id())->update([
+            'password' => Hash::make(trim($request->password))
+        ]);
+
+        return response(['status' => true, 'message' => 'Successfully password has been updated.', 'data' => null]);
     }
 }

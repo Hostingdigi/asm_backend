@@ -21,10 +21,13 @@ use App\Http\Controllers\Api\ApiController;
 
 Route::post('register', [ApiAuthController::class, 'register']);
 Route::post('login', [ApiAuthController::class, 'login']);
+Route::post('forgot-password', [ApiAuthController::class, 'forgotPassword']);
 
 Route::get('categories', [ApiController::class, 'listCategories']);
 Route::get('brands', [ApiController::class, 'listBrands']);
 Route::get('promocodes', [ApiController::class, 'listPromocodes']);
+Route::post('frequent-bought-items', [ApiController::class, 'listFrequentItems']);
+
 
 Route::prefix('products')->group(function () {
 
@@ -40,7 +43,7 @@ Route::prefix('products')->group(function () {
 
 Route::middleware(['auth:api', 'user_accessible'])->group(function () {
 
-    //
+    Route::post('change-password', [ApiAuthController::class, 'changePassword']);
     Route::get('logout', [ApiAuthController::class, 'logout']);
 
     Route::post('save-address', [ApiController::class, 'saveAddress']);

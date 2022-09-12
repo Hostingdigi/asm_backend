@@ -23,7 +23,7 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Category::select(['id', 'parent_id', 'name', 'image', 'status'])->orderBy('id','desc')
+            $users = Category::select(['id', 'parent_id', 'name', 'image', 'banner_image', 'status'])->orderBy('id','desc')
                 ->bothInActive();
 
             return Datatables::of($users)
@@ -35,7 +35,10 @@ class CategoryController extends Controller
                     return ucwords($row->name);
                 })
                 ->addColumn('image', function ($row) {
-                    return !empty($row->image) ? '<img class="img-thumbnail" width="75" height="75" src="' . asset('assets/'.$row->image) . '" >' : '';
+                    return !empty($row->image) ? '<img class="img-thumbnail" width="75" height="75" src="' . Storage::url($row->image) . '" >' : '';
+                })
+                ->addColumn('banner_image', function ($row) {
+                    return !empty($row->banner_image) ? '<img class="img-thumbnail" width="75" height="75" src="' . Storage::url($row->banner_image) . '" >' : '';
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
@@ -57,7 +60,7 @@ class CategoryController extends Controller
 
                     return $actions;
                 })
-                ->rawColumns(['actions', 'status', 'image'])
+                ->rawColumns(['actions', 'status', 'image','banner_image'])
                 ->make(true);
         }
 
@@ -84,15 +87,20 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        $imageName = '';
+        $imageName = $bannerImage = '';
         if ($request->has('category_image')) {
             $imageName = Storage::put('images', $request->category_image);
+        }
+
+        if ($request->has('banner_image')) {
+            $bannerImage = Storage::put('images', $request->banner_image);
         }
 
         $createClinic = Category::create([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
             'image' => $imageName,
+            'banner_image' => $bannerImage,
             'description' => '',
         ]);
 
@@ -125,8 +133,9 @@ class CategoryController extends Controller
      */
     public function edit($id)
     {
-        $data = Category::select(['id', 'parent_id', 'name', 'image'])->find($id);
-        $data->image = !empty($data->image) ? asset('assets/'.$data->image) : '';
+        $data = Category::select(['id', 'parent_id', 'name', 'image', 'banner_image'])->find($id);
+        $data->image = !empty($data->image) ? asset('storage/'.$data->image) : '';
+        $data->banner_image = !empty($data->banner_image) ? asset('storage/'.$data->banner_image) : '';
         return response()->json([
             'data' => $data
         ]);
@@ -144,6 +153,7 @@ class CategoryController extends Controller
         $currentDetails = Category::find($id);
 
         $oldImageName = $currentDetails->image;
+        $bannerImage = $currentDetails->banner_image;
 
         if ($request->has('category_image') && !empty($request->category_image)) {
             $imageName = Storage::put('images', $request->category_image);
@@ -154,10 +164,20 @@ class CategoryController extends Controller
             $imageName = $oldImageName;
         }
 
+        if ($request->has('banner_image') && !empty($request->banner_image)) {
+            $bannerImageName = Storage::put('images', $request->banner_image);
+            if (!empty($bannerImage) && !Storage::missing($bannerImage)) {
+                Storage::delete($bannerImage);
+            }
+        } else {
+            $bannerImageName = $bannerImage;
+        }
+
         $createClinic = Category::where('id', $id)->update([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
             'image' => $imageName,
+            'banner_image' => $bannerImageName,
             'description' => '',
         ]);
 
