@@ -36,8 +36,16 @@
                                     <input type="text" required class="form-control" name="category_name" placeholder="Enter your category name" autofocus />
                             </div>
                             <div class="mb-3">
-                                <label class="col-form-label">Image</label><br>
-                                <input type="file" name="category_image" />
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <label class="col-form-label">Image</label><br>
+                                        <input type="file" name="category_image" />
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="col-form-label">Banner Image</label><br>
+                                        <input type="file" name="banner_image" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -74,10 +82,21 @@
                                     <input type="text" required class="form-control" id="cat_name" name="category_name" placeholder="Enter your category name" autofocus />
                             </div>
                             <div class="mb-3">
-                                <label class="col-form-label">Image</label><br>
-                                <input type="file" name="category_image" />
-                                <br>
-                                <img src="" id="pImg" class="d-none c-avatars-stack mt-2 img-thumbnail" width="85" height="85" >
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <label class="col-form-label">Image</label><br>
+                                        <input type="file" name="category_image" />
+                                        <br>
+                                        <img src="" id="pImg" class="d-none c-avatars-stack mt-2 img-thumbnail" width="85" height="85" >
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="col-form-label">Banner Image</label><br>
+                                        <input type="file" name="banner_image" />
+                                        <br>
+                                        <img src="" id="bImg" class="d-none c-avatars-stack mt-2 img-thumbnail" width="85" height="85" >
+                                    </div>
+                                </div>
+                                
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -99,6 +118,7 @@
                     <th>PARENT CATEGORY</th>
                     <th>NAME</th>
                     <th>IMAGE</th>
+                    <th>BANNER IMAGE</th>
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                     </tr>
@@ -131,6 +151,11 @@
                         $("#pImg").attr("src","").addClass("d-none");
                     }else{
                         $("#pImg").removeClass("d-none").attr("src",result['data']['image']);
+                    }
+                    if(!result['data']['banner_image']){
+                        $("#bImg").attr("src","").addClass("d-none");
+                    }else{
+                        $("#bImg").removeClass("d-none").attr("src",result['data']['banner_image']);
                     }
                     $("#editCategory").modal("show");
                 }
@@ -179,6 +204,7 @@
                     { data: 'parent', name: 'parent' },
                     { data: 'name', name: 'name' },
                     { data: 'image', name: 'image' },
+                    { data: 'banner_image', name: 'banner_image' },
                     { data: 'status', name: 'status' },
                     { data: 'actions', name: 'actions' }
                 ]

@@ -36,6 +36,15 @@
                 :text="__('Orders')" />
         </li>
 
+                <li class="c-sidebar-nav-item">
+            <x-utils.link
+                class="c-sidebar-nav-link"
+                :href="route('admin.coupons.index')"
+                :active="activeClass(Route::is('admin.coupons.*'), 'c-active')"
+                icon="c-sidebar-nav-icon cil-puzzle"
+                :text="__('Coupons')" />
+        </li>
+
         <li class="c-sidebar-nav-dropdown {{ activeClass(Route::is('admin.masters.*'), 'c-open c-show') }}">
                 <x-utils.link
                     href="#"

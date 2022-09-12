@@ -3,22 +3,30 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand, App\Models\Cart;
-use App\Models\CartAddress, App\Models\Category, App\Models\Order;
-use App\Models\Payment, App\Models\Product, App\Models\ProductWishlist, App\Models\OrderItem;
+use App\Models\Brand;
+use App\Models\Cart;
+use App\Models\CartAddress;
+use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Product;
+use App\Models\ProductWishlist;
+use DB;
 use Illuminate\Http\Request;
 
 class ApiController extends Controller
 {
     public function listCategories(Request $request)
     {
-        $data = Category::select('id', 'name', 'image')->where('parent_id', 0)->activeOnly();
+        $data = Category::select('id', 'name', 'image', 'banner_image')->where('parent_id', 0)->activeOnly();
         $data->map(function ($row) {
-            $row['image'] = !empty($row->image) ? asset('assets/' . $row->image) : '';
+            $row['image'] = !empty($row->image) ? url('storage/' . $row->image) : '';
+            $row['banner_image'] = !empty($row->banner_image) ? url('storage/' . $row->banner_image) : '';
             $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
 
             $subCategories->map(function ($sRow) {
-                $sRow['image'] = !empty($sRow->image) ? asset('assets/' . $sRow->image) : '';
+                $sRow['image'] = !empty($sRow->image) ? url('storage/' . $sRow->image) : '';
             });
 
             $row['subCategories'] = $subCategories;
@@ -35,7 +43,7 @@ class ApiController extends Controller
 
     public function productDetails(Request $request, $productId)
     {
-        $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
+        $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
         }, 'images' => function ($query) {
@@ -47,11 +55,11 @@ class ApiController extends Controller
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['image'] = !empty($row->image) ? url('img/' . $row->image) : '';
+            $row['cover_image'] = !empty($row->cover_image) ? url('img/' . $row->cover_image) : '';
 
             $row['images'] = $row['images']->map(function ($img) {
 
-                $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
+                $img['file_name'] = !empty($img->file_name) ? url('storage/' . $img->file_name) : '';
                 unset($img['product_id']);
                 return $img;
             });
@@ -65,23 +73,25 @@ class ApiController extends Controller
 
     public function listProducts(Request $request)
     {
-        $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
+        $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
         }, 'images' => function ($query) {
             $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
-        }])->activeOnly();
+        }])
+            ->where('category_id', $request->category_id)
+            ->activeOnly();
 
         $data = $data->map(function ($row) {
 
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['image'] = !empty($row->image) ? asset('assets/' . $row->image) : '';
+            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
 
             $row['images'] = $row['images']->map(function ($img) {
 
-                $img['file_name'] = !empty($img->file_name) ? asset('assets/' . $img->file_name) : '';
+                $img['file_name'] = !empty($img->file_name) ? url('storage/' . $img->file_name) : '';
                 unset($img['product_id']);
                 return $img;
             });
@@ -265,7 +275,7 @@ class ApiController extends Controller
 
     public function listMyOrders(Request $request)
     {
-        $orders = Order::where('user_id',auth()->id())->get();
+        $orders = Order::where('user_id', auth()->id())->get();
         return response()->json(['status' => true, 'message' => '', 'data' => $orders]);
 
     }
@@ -350,7 +360,7 @@ class ApiController extends Controller
             Order::where('id', $order->id)->update(['payment_id' => $payment->id]);
 
             //Assign order id to items
-            array_walk_recursive($orderItems, function (&$item, $key) use($order) {
+            array_walk_recursive($orderItems, function (&$item, $key) use ($order) {
                 if ($key == 'order_id') {
                     $item = $order->id;
                 }
@@ -364,15 +374,15 @@ class ApiController extends Controller
                 'status' => true,
                 'message' => 'Successfully order has been created',
                 'data' => [
-                    'order_id '=> $order->id
-                ]
+                    'order_id ' => $order->id,
+                ],
             ]);
         }
 
         return response()->json([
             'status' => false,
             'message' => 'Cart items are not available',
-            'data' => null
+            'data' => null,
         ]);
     }
 
@@ -395,7 +405,7 @@ class ApiController extends Controller
     public function ListWishlist(Request $request)
     {
         $data = ProductWishlist::with(['product' => function ($query) {
-            $query->select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image as image',
+            $query->select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
                 'description')->with('variants:id,product_id,name,price,unit_id');
         }])->latest()->get();
 
@@ -408,7 +418,7 @@ class ApiController extends Controller
             $product->category_name = Category::find($product->category_id)->name;
             $product->brand_name = !empty($product->brand_id) ? Brand::find($product->brand_id)->name : '';
 
-            $product->image = !empty($product->image) ? asset('assets/' . $product->image) : '';
+            $product->cover_image = !empty($product->cover_image) ? url('storage/' . $product->cover_image) : '';
             array_push($products, $row->product);
             unset($product->supplier);
 
@@ -448,6 +458,35 @@ class ApiController extends Controller
                     'image' => 'https: //images.pexels.com/photos/5273011/pexels-photo-5273011.jpeg?auto=compress&cs=tinysrgb&w=600',
                 ],
             ],
+        ]);
+    }
+
+    public function listFrequentItems(Request $request)
+    {
+        $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
+            ->orderBy('sale_count', 'desc')->get();
+
+        $productIds = !empty($frequentItems) ? $frequentItems->pluck(['product_id']) : [];
+
+        $products = Product::select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
+            $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+        }]);
+
+        if (count($productIds) > 0) {
+            $products = $products->whereIn('id', $productIds);
+        }
+
+        $products = $products->activeOnly();
+
+        $products = $products->map(function ($row) {
+            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
+            return $row;
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => '',
+            'data' => $products,
         ]);
     }
 }

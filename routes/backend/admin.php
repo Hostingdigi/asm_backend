@@ -117,6 +117,16 @@ Route::post('products/update-variant-status', 'Backend\ProductController@updateV
 Route::post('products/remove-pro-image', 'Backend\ProductController@removeProImage')->name('products.removeProImage');
 Route::post('products/change-pro-image-order', 'Backend\ProductController@updateDisplayProImage')->name('products.updateDisplayProImage');
 
+Route::resource('coupons', 'Backend\CouponsController')->names([
+    'index' => 'coupons.index',
+    'store' => 'coupons.store',
+    'edit' => 'coupons.edit',
+    'update' => 'coupons.update',
+]);
+Route::post('coupons/list-supplier-categories', 'Backend\CouponsController@create')->name('coupons.listSupplierCategories');
+Route::post('coupons/check-duplicate', 'Backend\CouponsController@checkDuplicate')->name('coupons.checkDuplicate');
+Route::get('coupons/update/status/{userId}/{statusCode}', 'Backend\CouponsController@updateStatus')->name('coupons.updateStatus');
+
 Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
 
     Route::get('/', 'Backend\OrderController@listOrders')->name('listOrders')->breadcrumbs(function (Trail $trail) {
