@@ -21,6 +21,11 @@ class Product extends Model
         return $query->where('status','!=','2')->orderBy('name')->get();
     }
 
+    public function getFormatedCoverImageUrlAttribute()
+    {
+        return !empty($this->cover_image) ? asset('storage/'.$this->cover_image) : '';
+    }
+
     public function supplier()
     {
         return $this->belongsTo(User::class);

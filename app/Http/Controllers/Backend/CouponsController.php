@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Backend;
 
+use App\Domains\Auth\Models\User;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Coupon;
+use App\Models\Product;
+use DataTables;
 use Illuminate\Http\Request;
-use DataTables, DB, Storage;
-use App\Models\Category, App\Models\Coupon, App\Models\Product, App\Domains\Auth\Models\User;
+use Storage;
 
 class CouponsController extends Controller
 {
@@ -14,7 +18,13 @@ class CouponsController extends Controller
         'status' => 0,
         'message' => 'Something went wrong.Try again later.',
     ];
-    
+
+    protected $couponTypes = [
+        'common' => 'Common',
+        'category' => 'Category Based',
+        'supplier' => 'Supplier Based'
+    ];
+
     /**
      * Display a listing of the resource.
      *
@@ -28,17 +38,17 @@ class CouponsController extends Controller
             return Datatables::of($users)
                 ->addIndexColumn()
                 ->addColumn('validity', function ($row) {
-                    return \Carbon\Carbon::parse($row->start_date)->format('d-m-Y').' - '.
-                        \Carbon\Carbon::parse($row->end_date)->format('d-m-Y');
+                    return \Carbon\Carbon::parse($row->start_date)->format('d-m-Y') . ' - ' .
+                    \Carbon\Carbon::parse($row->end_date)->format('d-m-Y');
                 })
                 ->addColumn('code', function ($row) {
-                    return '<b>'.$row->code.'</b>';
+                    return '<b>' . $row->code . '</b>';
                 })
                 ->addColumn('offer_value', function ($row) {
                     $amount = $row->coupon_type == 'amount' ? 'SGD ' : '';
                     $percentage = $row->coupon_type == 'percentage' ? ' %' : '';
-                    
-                    return '<b>'.$amount.$row->offer_value.$percentage.'</b>';
+
+                    return '<b>' . $amount . $row->offer_value . $percentage . '</b>';
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
@@ -49,10 +59,10 @@ class CouponsController extends Controller
 
                 })
                 ->addColumn('actions', function ($row) {
-                    $actions = $row->status == '1' ? '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ' : 
-                        '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
+                    $actions = $row->status == '1' ? '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ' :
+                    '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
 
-                    $actions .= '<a title="Update" href="' . route('admin.products.edit', $row->id) . '" class="btn btn-outline-info"><i class="fa fa-fw fa-edit"></i></a> ';
+                    $actions .= '<a title="Update" href="' . route('admin.coupons.edit', $row->id) . '" class="btn btn-outline-info"><i class="fa fa-fw fa-edit"></i></a> ';
                     $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
 
                     return $actions;
@@ -75,11 +85,12 @@ class CouponsController extends Controller
 
         if ($request->ajax()) {
             return response()->json([
-                'data' => Category::select(['id', 'name'])->whereIn('id',Product::select(['category_id'])->where('user_id',$request->supplier)->groupBy('category_id')->activeOnly()->pluck(['category_id'])->all())->activeOnly()
+                'data' => Category::select(['id', 'name'])->whereIn('id', Product::select(['category_id'])->where('user_id', $request->supplier)->groupBy('category_id')->activeOnly()->pluck(['category_id'])->all())->activeOnly(),
             ]);
         }
+        $couponTypes = $this->couponTypes;
 
-        return view('backend.coupon_create', compact('supplier', 'category'));
+        return view('backend.coupon_create', compact('supplier', 'category', 'couponTypes'));
     }
 
     /**
@@ -90,7 +101,7 @@ class CouponsController extends Controller
      */
     public function store(Request $request)
     {
-        $inserData = [
+        Coupon::create([
             'coupon_type' => $request->coupon_type,
             'title' => $request->title,
             'code' => $request->cup_code,
@@ -98,21 +109,16 @@ class CouponsController extends Controller
             'description' => $request->pro_desc,
             'start_date' => $request->sdate,
             'end_date' => $request->edate,
-            'image' => $request->has('image') ? Storage::put('images', $request->image) : ''
-        ];
-
-        $vendorCustomization = [
-            'coupon_for' => $request->coupon_for,
-            'category' => $request->has('off_cat') ? $request->off_cat : '',
-            'vendor' => [
-                'id' => $request->has('off_sup') ? $request->off_sup : '',
-                'category' => $request->has('off_sup_cat') ? $request->off_sup_cat : '',
-            ]
-        ];
-
-        $inserData['vendor_customization'] = serialize($vendorCustomization);
-
-        Coupon::create($inserData);
+            'image' => $request->has('image') ? Storage::put('images', $request->image) : '',
+            'vendor_customization' => serialize([
+                'coupon_for' => $request->coupon_for,
+                'category' => $request->has('off_cat') ? $request->off_cat : '',
+                'vendor' => [
+                    'id' => $request->has('off_sup') ? $request->off_sup : '',
+                    'category' => $request->has('off_sup_cat') ? $request->off_sup_cat : '',
+                ],
+            ]),
+        ]);
 
         $this->flashData = [
             'status' => 1,
@@ -141,9 +147,24 @@ class CouponsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Request $request,$id)
     {
-        //
+        $data = Coupon::find($id);
+        $supplier = User::select(['id', 'name'])->role('supplier')->activeOnly();
+        $category = Category::select(['id', 'name'])->activeOnly();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'data' => Category::select(['id', 'name'])->whereIn('id', Product::select(['category_id'])->where('user_id', $request->supplier)->groupBy('category_id')->activeOnly()->pluck(['category_id'])->all())->activeOnly(),
+            ]);
+        }
+
+        $vendorCustomization = unserialize($data->vendor_customization);
+        $couponTypes = $this->couponTypes;
+        $supplierCategory = $vendorCustomization['coupon_for'] == 'supplier' && !empty($vendorCustomization['vendor']['id']) ? 
+            Category::select(['id', 'name'])->whereIn('id', Product::select(['category_id'])->where('user_id', $vendorCustomization['vendor']['id'])->groupBy('category_id')->activeOnly()->pluck(['category_id'])->all())->activeOnly() : [];
+
+        return view('backend.coupon_edit', compact('supplier', 'category', 'data', 'vendorCustomization', 'couponTypes', 'supplierCategory'));
     }
 
     /**
@@ -155,7 +176,34 @@ class CouponsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $data = Coupon::find($id);
+        $image = $data->image;
+        Coupon::where('id',$id)->update([
+            'coupon_type' => $request->coupon_type,
+            'title' => $request->title,
+            'code' => $request->cup_code,
+            'offer_value' => $request->off_value,
+            'description' => $request->pro_desc,
+            'start_date' => $request->sdate,
+            'end_date' => $request->edate,
+            'image' => $request->has('image') ? Storage::put('images', $request->image) : $image,
+            'vendor_customization' => serialize([
+                'coupon_for' => $request->coupon_for,
+                'category' => $request->has('off_cat') ? $request->off_cat : '',
+                'vendor' => [
+                    'id' => $request->has('off_sup') ? $request->off_sup : '',
+                    'category' => $request->has('off_sup_cat') ? $request->off_sup_cat : '',
+                ],
+            ]),
+        ]);
+
+        $this->flashData = [
+            'status' => 1,
+            'message' => 'Successfully data has been updated.',
+        ];
+        $request->session()->flash('flashData', $this->flashData);
+
+        return redirect()->back();
     }
 
     /**
@@ -178,7 +226,7 @@ class CouponsController extends Controller
 
         if (Coupon::where([
             ['status', '!=', '2'],
-        ])->whereRaw("LOWER(code) = '".trim(strtolower($request->cup_code))."'")
+        ])->whereRaw("LOWER(code) = '" . trim(strtolower($request->cup_code)) . "'")
             ->when($rowIdTrue, function ($query) use ($rowId) {
                 return $query->where('id', '!=', $rowId);
             })

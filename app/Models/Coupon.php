@@ -11,11 +11,16 @@ class Coupon extends Model
 
     public function scopeActiveOnly($query)
     {
-        return $query->where('status','1')->get();
+        return $query->where('status','1')->latest()->get();
     }
 
     public function scopeBothInActive($query)
     {
         return $query->where('status','!=','2')->get();
+    }
+
+    public function getFormatedImageUrlAttribute()
+    {
+        return !empty($this->image) ? asset('storage/'.$this->image) : '';
     }
 }

@@ -1,5 +1,10 @@
 @extends('backend.layouts.app')
 @section('title', 'Coupons | Create Coupon')
+
+@push('before-styles')
+<style> .datepicker.datepicker-dropdown {z-index:9999 !important;} </style>
+@endpush
+
 @section('content')
 <x-backend.card>
     <x-slot name="header">
@@ -39,9 +44,9 @@
                     <div class="col">
                         <label class="form-label fw-bolder" for="coupon_for">Coupon For</label>
                         <select class="form-control" required id="coupon_for" name="coupon_for">
-                            <option selected value="common">Common</option>
-                            <option value="category">Category Based</option>
-                            <option value="supplier">Supplier Based</option>
+                            @foreach($couponTypes as $vk => $val)
+                                <option @if('common'==$vk) selected @endif value="{{ $vk }}">{{ $val }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
@@ -62,7 +67,7 @@
                     <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="off_value">Offer Value</label>
-                        <input class="form-control" name="off_value" required id="off_value" type="text" placeholder="Ener coupon value">
+                        <input class="form-control" name="off_value" required id="off_value" min="1" data-rule-number="true" type="text" placeholder="Ener coupon value">
                     </div>
                     <div class="col">
                         <br>
@@ -147,7 +152,7 @@
                 var htmlContent = '<div class="col"><br><label class="form-label fw-bolder" for="off_sup">Supplier</label>';
                 htmlContent += '<select required class="form-control" id="off_sup" name="off_sup">'+supOptions+'</select></div>';
                 htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="off_sup_cat">Category</label>';
-                htmlContent += '<select required class="form-control" id="off_sup_cat" name="off_sup_cat">'+supCatOptions+'</select></div>';
+                htmlContent += '<select class="form-control" id="off_sup_cat" name="off_sup_cat">'+supCatOptions+'</select></div>';
                 $("#v_cust_div").html(htmlContent);
             }
         });

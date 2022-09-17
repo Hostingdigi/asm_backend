@@ -1,5 +1,9 @@
 @extends('backend.layouts.app')
 @section('title', 'Products | Create Product')
+@push('after-styles')
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
+@endpush
+
 @section('content')
 <x-backend.card>
     <x-slot name="header">
@@ -75,7 +79,7 @@
                     <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="pro_desc">Description</label>
-                        <textarea class="form-control" name="pro_desc" rows="3"></textarea>
+                        <textarea class="form-control" name="pro_desc" id="pro_desc" rows="3"></textarea>
                     </div>
                 </div>
 
@@ -117,8 +121,12 @@
 @endsection
 
 @push('after-scripts')
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
+
 <script>
     $(document).ready( function () {
+
+        $('#pro_desc').summernote();
 
         var unitOptions = '';
         @foreach($units as $u)

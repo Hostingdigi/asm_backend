@@ -1,5 +1,9 @@
 @extends('backend.layouts.app')
 @section('title', 'Products | Edit Product')
+@push('after-styles')
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
+@endpush
+
 @section('content')
 <x-backend.card>
     <x-slot name="header">
@@ -15,8 +19,8 @@
 
     <x-slot name="body">
         <form method="post" action="{{ route('admin.products.update',$product->id) }}" id="editProductForm" enctype="multipart/form-data">
-                        {{csrf_field()}}
-                    <input type="hidden" name="_method" value="PUT">
+            {{csrf_field()}}
+            @method('PUT')
                 <div class="row">
                     <div class="col">
                         <label class="form-label fw-bolder" for="sup">Supplier</label>
@@ -63,7 +67,7 @@
                         <label class="form-label fw-bolder" for="pro_image">Cover Image</label>
                         <input class="" name="pro_image" type="file">
                         @if(!empty($product->cover_image))
-                        <img class="img-thumbnail mt-2" width="75" height="75" src="{{ asset('assets/'.$product->cover_image) }}">
+                        <img class="img-thumbnail mt-2" width="75" height="75" src="{{ url('storage/'.$product->cover_image) }}">
                         @endif
                     </div>
 
@@ -78,7 +82,7 @@
                     <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="pro_desc">Description</label>
-                        <textarea class="form-control" name="pro_desc" rows="3">{{ trim($product->description) }}</textarea>
+                        <textarea class="form-control" name="pro_desc" id="pro_desc" rows="3">{{ trim($product->description) }}</textarea>
                     </div>
                 </div>
                 
@@ -150,7 +154,7 @@
             @foreach($addImages as $img)
             <div class="row mt-3" id="img_row_{{ $img->id }}">
                 <div class="col-2">
-                    <img src="{{ asset('assets/'.$img->file_name) }}" width="75" height="75" class="img-thumbnail" alt="">
+                    <img src="{{ asset('storage/'.$img->file_name) }}" width="75" height="75" class="img-thumbnail" alt="">
                 </div>
                 <div class="col-3">
                     <label class="form-label fw-bolder">Display Order</label>
@@ -169,8 +173,11 @@
 @endsection
 
 @push('after-scripts')
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
 <script>
     $(document).ready( function () {
+
+        $('#pro_desc').summernote();
 
         var unitOptions = '';
         @foreach($units as $u)

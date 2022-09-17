@@ -40,7 +40,7 @@ class ProductController extends Controller
                     return ucwords($row->name);
                 })
                 ->addColumn('image', function ($row) {
-                    return !empty($row->cover_image) ? '<img class="img-thumbnail" width="75" height="75" src="' . asset('assets/'.$row->cover_image) . '">' : '';
+                    return !empty($row->cover_image) ? '<img class="img-thumbnail" width="75" height="75" src="' . url('storage/'.$row->cover_image) . '">' : '';
                 })
                 ->addColumn('varants', function ($row) {
                     return $row->variants->count();
