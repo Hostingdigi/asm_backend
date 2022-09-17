@@ -3,6 +3,13 @@
 @section('title', __('Dashboard'))
 
 @section('content')
+
+@if(Session::has('flashData'))
+    <x-utils.alert type="success">
+        {{ Session::get('flashData')['message'] }}
+    </x-utils.alert>
+    @endif
+    
     <x-backend.card nn="123">
         <x-slot name="header">
             List All Coupons

@@ -21,7 +21,7 @@ class CreateProductTable extends Migration
             $table->mediumText('code')->nullable();
             $table->mediumText('name');
             $table->mediumText('cover_image')->nullable();
-            $table->mediumText('description')->nullable();
+            $table->longText('description')->nullable();
             $table->enum('status', ['0', '1', '2'])->default('1');
             $table->timestamps();
         });

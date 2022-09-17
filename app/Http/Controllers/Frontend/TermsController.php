@@ -16,4 +16,9 @@ class TermsController extends Controller
     {
         return view('frontend.pages.terms');
     }
+
+    public function privacy()
+    {
+        return view('frontend.pages.privacy-policy');
+    }
 }

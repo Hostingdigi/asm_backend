@@ -3,16 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
-use App\Models\Cart;
-use App\Models\CartAddress;
-use App\Models\Category;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use App\Models\Product;
-use App\Models\ProductWishlist;
-use DB;
+use App\Models\Brand, App\Models\Cart, App\Models\CartAddress, App\Models\Category;
+use App\Models\Order, App\Models\OrderItem, App\Models\Payment, App\Models\Product;
+use App\Models\ProductWishlist, App\Models\Coupon, DB;
 use Illuminate\Http\Request;
 
 class ApiController extends Controller
@@ -21,12 +14,13 @@ class ApiController extends Controller
     {
         $data = Category::select('id', 'name', 'image', 'banner_image')->where('parent_id', 0)->activeOnly();
         $data->map(function ($row) {
-            $row['image'] = !empty($row->image) ? url('storage/' . $row->image) : '';
-            $row['banner_image'] = !empty($row->banner_image) ? url('storage/' . $row->banner_image) : '';
+
+            $row['image'] = $row->formatedimageurl;
+            $row['banner_image'] = $row->formatedbanner_imageurl;
             $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
 
             $subCategories->map(function ($sRow) {
-                $sRow['image'] = !empty($sRow->image) ? url('storage/' . $sRow->image) : '';
+                $sRow['image'] = $sRow->formatedimageurl;
             });
 
             $row['subCategories'] = $subCategories;
@@ -55,13 +49,22 @@ class ApiController extends Controller
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['cover_image'] = !empty($row->cover_image) ? url('img/' . $row->cover_image) : '';
+            $row['cover_image'] = $row->formatedcoverimageurl;
 
             $row['images'] = $row['images']->map(function ($img) {
 
-                $img['file_name'] = !empty($img->file_name) ? url('storage/' . $img->file_name) : '';
+                $img['file_name'] = $img->formatedimageurl;
+
                 unset($img['product_id']);
                 return $img;
+            });
+
+            $row['variants'] = $row['variants']->map(function ($var) {
+                $var['name'] = $var->name.$var->unit->name;
+                unset($var['product_id']);
+                unset($var['unit_id']);
+                unset($var['unit']);
+                return $var;
             });
 
             unset($row['supplier']);
@@ -73,6 +76,10 @@ class ApiController extends Controller
 
     public function listProducts(Request $request)
     {
+        $category = Category::select(['id','name','image','banner_image'])->find($request->category_id);
+        $category->image = $category->formatedimageurl;
+        $category->banner_image = $category->formatedbanner_imageurl;
+
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
@@ -87,20 +94,33 @@ class ApiController extends Controller
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
             $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
+            $row['cover_image'] = $row->formatedcoverimageurl;
 
             $row['images'] = $row['images']->map(function ($img) {
 
-                $img['file_name'] = !empty($img->file_name) ? url('storage/' . $img->file_name) : '';
+                $img['file_name'] = $img->formatedimageurl;
                 unset($img['product_id']);
                 return $img;
+            });
+
+            $row['variants'] = $row['variants']->map(function ($var) {
+                $var['name'] = $var->name.$var->unit->name;
+                unset($var['product_id']);
+                unset($var['unit_id']);
+                unset($var['unit']);
+                return $var;
             });
 
             unset($row['supplier']);
             return $row;
         });
 
-        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
+        return response()->json(['status' => true, 'message' => '', 'data' =>
+            [
+                'category' => $category,
+                'products' => $data,
+            ],
+        ]);
     }
 
     public function fetchCartItems($userId)
@@ -433,31 +453,16 @@ class ApiController extends Controller
 
     public function listPromocodes(Request $request)
     {
+        $data = Coupon::select(['id','title','code','offer_value','coupon_type','image','start_date','end_date','description'])->activeOnly();
+        $data->map(function ($row) {
+            $row['image'] = $row->formatedimageurl;
+            return $row;
+        });
+
         return response()->json([
             'status' => true,
             'message' => '',
-            'data' => [
-                [
-                    'id' => 1,
-                    'image' => 'https://images.pexels.com/photos/11591858/pexels-photo-11591858.jpeg?auto=compress&cs=tinysrgb&w=600',
-                ],
-                [
-                    'id' => 2,
-                    'image' => 'https://images.pexels.com/photos/5782239/pexels-photo-5782239.jpeg?auto=compress&cs=tinysrgb&w=600',
-                ],
-                [
-                    'id' => 3,
-                    'image' => 'https://images.pexels.com/photos/5920641/pexels-photo-5920641.jpeg?auto=compress&cs=tinysrgb&w=600',
-                ],
-                [
-                    'id' => 4,
-                    'image' => 'https://images.pexels.com/photos/5272931/pexels-photo-5272931.jpeg?auto=compress&cs=tinysrgb&w=600',
-                ],
-                [
-                    'id' => 5,
-                    'image' => 'https: //images.pexels.com/photos/5273011/pexels-photo-5273011.jpeg?auto=compress&cs=tinysrgb&w=600',
-                ],
-            ],
+            'data' => $data
         ]);
     }
 
