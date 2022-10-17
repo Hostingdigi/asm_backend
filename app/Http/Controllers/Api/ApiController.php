@@ -3,18 +3,33 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand, App\Models\Cart, App\Models\CartAddress, App\Models\Category;
-use App\Models\Order, App\Models\OrderItem, App\Models\Payment, App\Models\Product;
-use App\Models\ProductWishlist, App\Models\Coupon, DB;
+use App\Models\Brand;
+use App\Models\Cart;
+use App\Models\CartAddress;
+use App\Models\Category;
+use App\Models\CommonDatas;
+use App\Models\Coupon;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Product;
+use App\Models\ProductWishlist;
+use App\Rules\ValidateProduct;
+use App\Rules\validateProductIdArray;
+use App\Rules\ValidateProductVariant;
+use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ApiController extends Controller
 {
     public function listCategories(Request $request)
     {
-        $data = Category::select('id', 'name', 'image', 'banner_image')->where('parent_id', 0)->activeOnly();
+        $data = Category::select('id', 'name', 'long_name', 'image', 'banner_image')->where('parent_id', 0)->activeOnly();
         $data->map(function ($row) {
 
+            $row['long_name'] = empty($row->long_name) ? $row->name : $row->long_name;
             $row['image'] = $row->formatedimageurl;
             $row['banner_image'] = $row->formatedbanner_imageurl;
             $subCategories = Category::select('id', 'name', 'image')->where('parent_id', $row->id)->activeOnly();
@@ -27,16 +42,17 @@ class ApiController extends Controller
             return $row;
         });
 
-        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
+        return returnApiResponse(true, '', $data);
     }
 
     public function listBrands(Request $request)
     {
-        return response()->json(['status' => true, 'message' => '', 'data' => Brand::select(['id', 'name'])->activeOnly()]);
+        return returnApiResponse(true, '', Brand::select(['id', 'name'])->activeOnly());
     }
 
-    public function productDetails(Request $request, $productId)
+    public function productDetails(Request $request, $productId, $userId = null)
     {
+
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
             'description')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
@@ -44,7 +60,7 @@ class ApiController extends Controller
             $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
         }])->where('id', $productId)->activeOnly();
 
-        $data = $data->map(function ($row) {
+        $data = $data->map(function ($row) use ($userId) {
 
             $row['supplier_name'] = $row->supplier->name;
             $row['category_name'] = Category::find($row->category_id)->name;
@@ -60,66 +76,118 @@ class ApiController extends Controller
             });
 
             $row['variants'] = $row['variants']->map(function ($var) {
-                $var['name'] = $var->name.$var->unit->name;
+                $var['name'] = $var->name . $var->unit->name;
                 unset($var['product_id']);
                 unset($var['unit_id']);
                 unset($var['unit']);
                 return $var;
             });
 
+            $row['cart_details'] = !empty($userId) ? Cart::select(['id as cart_id', 'variant_id', 'quantity'])->where([['user_id', '=', $userId], ['product_id', '=', $row->id]])->first() : null;
+
             unset($row['supplier']);
             return $row;
         });
 
-        return response()->json(['status' => true, 'message' => '', 'data' => $data]);
+        return returnApiResponse(true, '', $data);
+    }
+
+    public function lastMinuteItems(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'product_ids' => ['sometimes', new validateProductIdArray],
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
+            ->orderBy('sale_count', 'desc')->get();
+
+        $productIds = !empty($frequentItems) ? $frequentItems->pluck(['product_id']) : [];
+
+        $products = Product::select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
+            $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+        }]);
+
+        if (count($productIds) > 0) {
+            $products = $products->whereIn('id', $productIds);
+        }
+
+        $products = $products->activeOnly();
+
+        $products = $products->map(function ($row) {
+            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
+            return $row;
+        });
+
+        return returnApiResponse(true, '', $products);
+
     }
 
     public function listProducts(Request $request)
     {
-        $category = Category::select(['id','name','image','banner_image'])->find($request->category_id);
-        $category->image = $category->formatedimageurl;
-        $category->banner_image = $category->formatedbanner_imageurl;
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required|integer',
+            'user_id' => 'sometimes|integer',
+        ]);
 
-        $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
-            'description')->with(['variants' => function ($query) {
-            $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
-        }, 'images' => function ($query) {
-            $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
-        }])
-            ->where('category_id', $request->category_id)
-            ->activeOnly();
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
 
-        $data = $data->map(function ($row) {
+        $category = Category::select(['id', 'name', 'long_name', 'image', 'banner_image'])->find($request->category_id);
+        $data = [];
+        $userId = $request->user_id;
 
-            $row['supplier_name'] = $row->supplier->name;
-            $row['category_name'] = Category::find($row->category_id)->name;
-            $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['cover_image'] = $row->formatedcoverimageurl;
+        if ($category) {
 
-            $row['images'] = $row['images']->map(function ($img) {
+            $category->long_name = empty($category->long_name) ? $category->name : $category->long_name;
+            $category->image = $category->formatedimageurl;
+            $category->banner_image = $category->formatedbannerimageurl;
 
-                $img['file_name'] = $img->formatedimageurl;
-                unset($img['product_id']);
-                return $img;
+            $data = Product::select('id', 'code', 'name', 'cover_image',
+                'description')->with(['variants' => function ($query) {
+                $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+            }, 'images' => function ($query) {
+                $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
+            }])
+                ->where('category_id', $request->category_id)
+                ->activeOnly();
+
+            $data = $data->map(function ($row) use ($userId) {
+
+                $row['cover_image'] = $row->formatedcoverimageurl;
+
+                $row['images'] = $row['images']->map(function ($img) {
+
+                    $img['file_name'] = $img->formatedimageurl;
+                    unset($img['product_id']);
+                    return $img;
+                });
+
+                $row['variants'] = $row['variants']->map(function ($var) {
+                    $var['name'] = $var->name . $var->unit->name;
+                    unset($var['product_id']);
+                    unset($var['unit_id']);
+                    unset($var['unit']);
+                    return $var;
+                });
+
+                $row['cart_details'] = !empty($userId) ? Cart::select(['id as cart_id', 'variant_id', 'quantity'])->where([['user_id', '=', $userId], ['product_id', '=', $row->id]])->first() : null;
+
+                unset($row['supplier']);
+                return $row;
             });
 
-            $row['variants'] = $row['variants']->map(function ($var) {
-                $var['name'] = $var->name.$var->unit->name;
-                unset($var['product_id']);
-                unset($var['unit_id']);
-                unset($var['unit']);
-                return $var;
-            });
+        }
 
-            unset($row['supplier']);
-            return $row;
-        });
-
-        return response()->json(['status' => true, 'message' => '', 'data' =>
-            [
-                'category' => $category,
-                'products' => $data,
-            ],
+        return returnApiResponse(true, '', [
+            'category' => $category,
+            'products' => $data,
         ]);
     }
 
@@ -154,44 +222,103 @@ class ApiController extends Controller
     public function listCartItems(Request $request)
     {
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json(['status' => true, 'message' => '', 'data' => [
-            'total_amount' => $fetchCartDetails['cartTotal'],
+        $deliveryAmount = 0;
+        $discountAmount = 0;
+        $totalAmount = ($fetchCartDetails['cartTotal'] + $deliveryAmount) - $discountAmount;
+
+        return returnApiResponse(true, '', [
+            'sub_total' => $fetchCartDetails['cartTotal'],
+            'delivery_amount' => $deliveryAmount,
+            'discount_amount' => $discountAmount,
+            'total_amount' => $totalAmount,
             'cart_items' => $fetchCartDetails['cartItems'],
-        ]]);
+        ]);
+
     }
 
     public function addItem(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'action' => [
+                'required',
+                'alpha',
+                Rule::in(['add', 'remove']),
+            ],
+            'product_id' => [
+                'required',
+                'integer',
+                new ValidateProduct,
+            ],
+            'variant_id' => [
+                'required',
+                'integer',
+                new ValidateProductVariant($request->product_id),
+            ],
+            'quantity' => 'required|integer|min:1',
+        ]);
 
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $quantity = 1;
         $isFound = Cart::where([
             ['user_id', '=', auth()->id()],
             ['product_id', '=', $request->product_id],
             ['variant_id', '=', $request->variant_id],
         ])->first();
 
-        if ($isFound) {
-            Cart::where([
-                ['id', '=', $isFound->id],
-            ])->update([
-                'quantity' => $request->quantity + $isFound->quantity,
-            ]);
+        if ($request->action == 'add') {
+
+            if ($isFound) {
+
+                Cart::where([
+                    ['id', '=', $isFound->id],
+                ])->update([
+                    'quantity' => $isFound->quantity + $request->quantity,
+                ]);
+
+            } else {
+                Cart::create([
+                    'user_id' => auth()->id(),
+                    'product_id' => $request->product_id,
+                    'variant_id' => $request->variant_id,
+                    'quantity' => $request->quantity,
+                ]);
+            }
+
         } else {
-            Cart::create([
-                'user_id' => auth()->id(),
-                'product_id' => $request->product_id,
-                'variant_id' => $request->variant_id,
-                'quantity' => $request->quantity,
-            ]);
+
+            if ($isFound) {
+
+                $quantity = 0;
+                if ($request->quantity < $isFound->quantity) {
+                    $quantity = $isFound->quantity - $request->quantity;
+                } else if ($request->quantity == $isFound->quantity) {
+                    $quantity = 0;
+                }
+
+                if ($quantity == 0) {
+                    Cart::where([
+                        ['id', '=', $isFound->id],
+                    ])->delete();
+                } else {
+                    Cart::where([
+                        ['id', '=', $isFound->id],
+                    ])->update([
+                        'quantity' => $quantity,
+                    ]);
+                }
+            }
         }
 
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json([
-            'status' => true,
-            'message' => 'Successfully item has been added',
-            'data' => [
-                'total_amount' => $fetchCartDetails['cartTotal'],
-                'cart_items' => $fetchCartDetails['cartItems'],
-            ]]);
+
+        return returnApiResponse(true, 'Successfully item has been added', [
+            'total_amount' => $fetchCartDetails['cartTotal'],
+            'cart_items' => $fetchCartDetails['cartItems'],
+        ]);
     }
 
     public function updateItem(Request $request)
@@ -221,13 +348,10 @@ class ApiController extends Controller
         }
 
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json([
-            'status' => true,
-            'message' => 'Successfully item has been ' . ($isRemoved == 1 ? 'removed' : 'updated'),
-            'data' => [
-                'total_amount' => $fetchCartDetails['cartTotal'],
-                'cart_items' => $fetchCartDetails['cartItems'],
-            ]]);
+        return returnApiResponse(true, 'Successfully item has been ' . ($isRemoved == 1 ? 'removed' : 'updated'), [
+            'total_amount' => $fetchCartDetails['cartTotal'],
+            'cart_items' => $fetchCartDetails['cartItems'],
+        ]);
     }
 
     public function removeItem(Request $request)
@@ -237,26 +361,20 @@ class ApiController extends Controller
             ['id', '=', $request->cart_id],
         ])->delete();
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json([
-            'status' => true,
-            'message' => 'Successfully item has been removed',
-            'data' => [
-                'total_amount' => $fetchCartDetails['cartTotal'],
-                'cart_items' => $fetchCartDetails['cartItems'],
-            ]]);
+        return returnApiResponse(true, 'Successfully item has been removed', [
+            'total_amount' => $fetchCartDetails['cartTotal'],
+            'cart_items' => $fetchCartDetails['cartItems'],
+        ]);
     }
 
     public function clearCart(Request $request)
     {
         Cart::where('user_id', auth()->id())->delete();
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return response()->json([
-            'status' => true,
-            'message' => 'Successfully cart has been cleared',
-            'data' => [
-                'total_amount' => $fetchCartDetails['cartTotal'],
-                'cart_items' => $fetchCartDetails['cartItems'],
-            ]]);
+        return returnApiResponse(true, 'Successfully cart has been cleared', [
+            'total_amount' => $fetchCartDetails['cartTotal'],
+            'cart_items' => $fetchCartDetails['cartItems'],
+        ]);
     }
 
     public function saveAddress(Request $request)
@@ -282,22 +400,18 @@ class ApiController extends Controller
             CartAddress::create($shippingAddress);
         }
 
-        return response()->json(['status' => true, 'message' => 'Successfully address has been saved',
-            'data' => $this->getAddress($request)->original['data']]);
+        return returnApiResponse(true, 'Successfully address has been saved', $this->getAddress($request)->original['data']);
     }
 
     public function getAddress(Request $request)
     {
-        return response()->json(['status' => true, 'message' => '', 'data' => CartAddress::where([['user_id', '=', auth()->id()], ['address_type', '=', '1']])->first(),
-        ]);
-
+        return returnApiResponse(true, '', CartAddress::where([['user_id', '=', auth()->id()], ['address_type', '=', '1']])->first());
     }
 
     public function listMyOrders(Request $request)
     {
         $orders = Order::where('user_id', auth()->id())->get();
-        return response()->json(['status' => true, 'message' => '', 'data' => $orders]);
-
+        return returnApiResponse(true, '', $orders);
     }
 
     public function createOrder(Request $request)
@@ -390,20 +504,12 @@ class ApiController extends Controller
             //Clear cart items
             Cart::where('user_id', auth()->id())->delete();
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Successfully order has been created',
-                'data' => [
-                    'order_id ' => $order->id,
-                ],
+            return returnApiResponse(true, 'Successfully order has been created', [
+                'order_id ' => $order->id,
             ]);
         }
 
-        return response()->json([
-            'status' => false,
-            'message' => 'Cart items are not available',
-            'data' => null,
-        ]);
+        return returnApiResponse(false, 'Cart items are not available');
     }
 
     public function addToWishlist(Request $request)
@@ -415,11 +521,7 @@ class ApiController extends Controller
 
         $data = $this->ListWishlist($request)->original['data'];
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Successfully product has been added to wishlist',
-            'data' => $data,
-        ]);
+        return returnApiResponse(true, 'Successfully product has been added to wishlist', $data);
     }
 
     public function ListWishlist(Request $request)
@@ -444,26 +546,35 @@ class ApiController extends Controller
 
         }
 
-        return response()->json([
-            'status' => true,
-            'message' => '',
-            'data' => $products,
-        ]);
+        return returnApiResponse(true, '', $products);
+    }
+
+    public function removeWishlist(Request $request)
+    {
+        if ($request->has('product_id') && !empty($request->product_id)) {
+            $product = ProductWishlist::where('product_id', trim($request->product_id))->first();
+            if ($product) {
+                $product->delete();
+                return returnApiResponse(true, 'Successfully item has been removed.');
+            } else {
+                return returnApiResponse(false, 'Item does not exist.');
+            }
+
+        } else {
+            ProductWishlist::where('user_id', auth()->id())->delete();
+        }
+        return returnApiResponse(true, 'All items are removed successfully');
     }
 
     public function listPromocodes(Request $request)
     {
-        $data = Coupon::select(['id','title','code','offer_value','coupon_type','image','start_date','end_date','description'])->activeOnly();
+        $data = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'])->activeOnly();
         $data->map(function ($row) {
             $row['image'] = $row->formatedimageurl;
             return $row;
         });
 
-        return response()->json([
-            'status' => true,
-            'message' => '',
-            'data' => $data
-        ]);
+        return returnApiResponse(true, '', $data);
     }
 
     public function listFrequentItems(Request $request)
@@ -488,10 +599,33 @@ class ApiController extends Controller
             return $row;
         });
 
-        return response()->json([
-            'status' => true,
-            'message' => '',
-            'data' => $products,
+        return returnApiResponse(true, '', $products);
+    }
+
+    public function dynamicPages(Request $request, $key)
+    {
+        $hmlData = CommonDatas::select(['id', 'value_1 as html'])->where([['key', '=', trim($key)], ['status', '=', '1']])->first();
+        return returnApiResponse(true, '', $hmlData ? $hmlData : null);
+    }
+
+    public function paymentMethods(Request $request)
+    {
+        return returnApiResponse(true, '', [
+            [
+                'type' => 'credit_card',
+                'name' => 'Credit Card',
+                'notes' => ''
+            ],
+            [
+                'type' => 'debit_card',
+                'name' => 'Debit Card',
+                'notes' => ''
+            ],
+            [
+                'type' => 'cod',
+                'name' => 'Pay On Delivery',
+                'notes' => 'Pay with cash'
+            ]
         ]);
     }
 }

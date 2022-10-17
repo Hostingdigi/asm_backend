@@ -5,10 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Domains\Auth\Models\User;
 use App\Domains\Auth\Services\UserService;
 use App\Http\Controllers\Controller;
+use App\Models\PasswordForgotRequest;
+use GuzzleHttp\Client;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Laravel\Passport\Client as OClient;
+use Storage;
 
 class ApiAuthController extends Controller
 {
@@ -27,29 +32,17 @@ class ApiAuthController extends Controller
     public function register(Request $request)
     {
         $rules = [
-            'name' => 'required|max:255',
-            'email' => 'required|email|max:255|unique:users',
-            'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
-            'mobile' => 'nullable|digits:10',
+            'first_name' => 'bail|required|max:50',
+            'last_name' => 'bail|required|max:50',
+            'email' => 'bail|required|email|max:50|unique:users',
+            'password' => 'bail|required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
+            'mobile' => 'bail|nullable|digits:10',
         ];
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             $errors = $validator->errors();
-
-            $formatedErrors = [];
-
-            foreach ($rules as $rk => $rule) {
-                if ($errors->has($rk)) {
-                    array_push($formatedErrors, [$rk => $errors->first($rk)]);
-                }
-            }
-
-            return response([
-                'status' => false,
-                'message' => 'validation_error',
-                'data' => null,
-            ]);
+            return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
         $userData = Arr::only($request->all(), array_keys($rules));
@@ -58,20 +51,17 @@ class ApiAuthController extends Controller
 
         $user = $this->userService->registerUser($userData);
 
+        //Sync Roles
         $user->syncRoles(['customer']);
 
-        $token = $user->createToken('API Token')->accessToken;
+        $oClient = OClient::where('password_client', 1)->first();
+        $tokens = $this->getTokenAndRefreshToken($oClient, $user->email, request('password'));
 
-        // $data['password'] = bcrypt($request->password);
-        // $user = User::create($data);
-        // $token = $user->createToken('API Token')->accessToken;
-
-        // return response([ 'user' => $user, 'token' => $token]);
         unset($user['roles']);
 
-        return response()->json(['status' => true, 'message' => 'Successfully user has been created',
-            'data' => ['token' => $token, 'user' => collect($user)->only(['id', 'name', 'email', 'avatar'])],
-        ]);
+        return returnApiResponse(true, 'Successfully user has been created', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'image']),
+            'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token']]);
+
     }
 
     public function login(Request $request)
@@ -80,45 +70,217 @@ class ApiAuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
+
         if ($validator->fails()) {
-            return response(['status' => false, 'message' => 'validation_error', 'data' => null]);
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
         }
+
         $user = User::where('email', $request->email)->first();
-        if ($user) {
-            if (Hash::check($request->password, $user->password)) {
-
-                if (!auth()->attempt($request->all())) {
-                    return response(['status' => false, 'message' => 'Incorrect Details. Please try again']);
-                }
-
-                $token = auth()->user()->createToken('API Token')->accessToken;
-                // $token = 1;// $user->createToken('API Token')->accessToken;
-                $response = ['status' => true, 'message' => 'Successfully logged in.', 'data' => [
-                    'token' => $token, 'user' => collect($user)->only(['id', 'name', 'email', 'avatar'])],
-                ];
-                return response($response);
-            } else {
-                $response = ['status' => false, 'message' => 'Password mismatch', 'data' => null];
-                return response($response);
-            }
-        } else {
-            $response = ['status' => false, 'message' => 'User does not exist', 'data' => null];
-            return response($response);
+        //If user is not found
+        if (!$user) {
+            return returnApiResponse(false, 'User does not exist');
         }
 
-        return response()->json($request->all());
+        //If user password is not match
+        if (!Hash::check($request->password, $user->password)) {
+            return returnApiResponse(false, 'Password mismatch');
+        }
+
+        //If user login is not work
+        if (!auth()->attempt($request->all())) {
+            return returnApiResponse(false, 'Incorrect Details. Please try again');
+        }
+
+        $oClient = OClient::where('password_client', 1)->first();
+        $tokens = $this->getTokenAndRefreshToken($oClient, request('email'), request('password'));
+
+        // $token = auth()->user()->createToken('API Token')->accessToken;
+        return returnApiResponse(true, 'Successfully logged in.', [
+            'user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'image']),
+            'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token'],
+        ]);
+    }
+
+    public function getTokenAndRefreshToken(OClient $oClient, $email, $password)
+    {
+        $oClient = OClient::where('password_client', 1)->first();
+        $http = new Client;
+        $response = $http->request('POST', url('oauth/token'), [
+            'form_params' => [
+                'grant_type' => 'password',
+                'client_id' => $oClient->id,
+                'client_secret' => $oClient->secret,
+                'username' => $email,
+                'password' => $password,
+                'scope' => '*',
+            ],
+        ]);
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    public function profileUpdate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'bail|required',
+            'last_name' => 'bail|required',
+            'password' => 'nullable|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
+            'image' => 'sometimes|file',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $message = 'Successfully profile has been updated.';
+
+        $createD = [
+            'first_name' => trim($request->first_name),
+            'last_name' => trim($request->last_name),
+        ];
+
+        $passwordChanged = 0;
+        if (!empty($request->password)) {
+            $passwordChanged = 1;
+            $createD['password'] = Hash::make(trim($request->password));
+            $message .= 'You are changed your password, so you are going to logged off. Login again';
+        }
+
+        if ($request->hasFile('image')) {
+            $createD['image'] = Storage::put('images', $request->image);
+        }
+
+        User::where('id', auth()->id())->update($createD);
+
+        $userData = collect(User::find(auth()->id()))->only(['id', 'first_name', 'last_name', 'image']);
+
+        if ($passwordChanged) {
+            $token = $request->user()->token();
+            $token->revoke();
+        }
+
+        return returnApiResponse(true, $message, !$passwordChanged ? [
+            'logout' => 0,
+            'user' => $userData,
+        ] : [
+            'logout' => 1,
+        ]);
     }
 
     public function logout(Request $request)
     {
         $token = $request->user()->token();
         $token->revoke();
-        return response(['status' => true, 'message' => 'You have been successfully logged out!', 'data' => null]);
+        return returnApiResponse(true, 'You have been successfully logged out!');
     }
 
-    public function forgotPassword(Request $request)
+    public function forgotPasswordRequest(Request $request)
     {
-        return response(['status' => true, 'message' => 'Your request has been processing, please check your inbox.', 'data' => null]);
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+        if ($validator->fails()) {
+            return returnApiResponse(false, $validator->errors('email')->first());
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if ($user) {
+            if ($user->statue != '2') {
+
+                $emailAddress = $user->email;
+                $isExists = 0;
+                PasswordForgotRequest::where([['user_id', '=', $user->id], ['status', '=', '1']])->update(['status' => '0']);
+                do {
+                    $randomNumber = random_int(100000, 999999);
+                    $isExists = PasswordForgotRequest::where([['user_id', '=', $user->id], ['otp', '=', $randomNumber]])->count();
+                } while ($isExists == 1);
+
+                PasswordForgotRequest::create([
+                    'user_id' => $user->id,
+                    'otp' => $randomNumber,
+                ]);
+
+                // Mail::send([], [], function ($message) use($emailAddress){
+                //     $message->to($emailAddress)
+                //         ->subject('Forgot Password Link')
+                //         ->setBody('<h1>Hi, welcome user!</h1>', 'text/html'); // for HTML rich messages
+                // });
+
+                return returnApiResponse(true, 'Your request has been processing, please check your inbox.', [
+                    'waitingTime' => 180,
+                ]);
+
+            } else {
+                return returnApiResponse(false, 'Invalid email address');
+            }
+        } else {
+            return returnApiResponse(false, 'User does not exist');
+        }
+    }
+
+    public function verifyOTP(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => [
+                'required',
+                'email',
+                Rule::exists('users')->where(function ($query) {
+                    $query->where('active', 1);
+                }),
+            ],
+            'otp' => 'required|integer|digits:6',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        $isExists = PasswordForgotRequest::where([
+            'user_id' => $user->id,
+            'otp' => $request->otp,
+            'status' => '1',
+        ])->latest()->first();
+
+        if ($isExists) {
+            $nos = \Carbon\Carbon::now();
+            $tt = \Carbon\Carbon::parse($isExists->created_at);
+
+            if ($nos->diffInSeconds($tt) > 180) {
+
+                PasswordForgotRequest::where([['id', '=', $isExists->id], ['status', '=', '1']])->update(['status' => '0']);
+                return returnApiResponse(false, 'OTP is expired');
+            }
+
+            return returnApiResponse(true, 'OTP is valid');
+
+        } else {
+            return returnApiResponse(false, 'OTP is invalid');
+        }
+
+    }
+
+    public function forgotPasswordUpdate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        User::where('id', $isValid->user_id)->update([
+            'password' => Hash::make(trim($request->password)),
+        ]);
+        $isValid->status = '2';
+        $isValid->save();
+
+        return returnApiResponse(true, 'Successfully password has been reseted');
     }
 
     public function changePassword(Request $request)
@@ -129,13 +291,13 @@ class ApiAuthController extends Controller
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
-            return returnApiResponse(false,'validation_error');
+            return returnApiResponse(false, 'validation_error');
         }
 
-        User::where('id',auth()->id())->update([
-            'password' => Hash::make(trim($request->password))
+        User::where('id', auth()->id())->update([
+            'password' => Hash::make(trim($request->password)),
         ]);
 
-        return response(['status' => true, 'message' => 'Successfully password has been updated.', 'data' => null]);
+        return returnApiResponse(true, 'Successfully password has been updated');
     }
 }

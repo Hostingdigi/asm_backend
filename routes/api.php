@@ -21,27 +21,33 @@ use App\Http\Controllers\Api\ApiController;
 
 Route::post('register', [ApiAuthController::class, 'register']);
 Route::post('login', [ApiAuthController::class, 'login']);
-Route::post('forgot-password', [ApiAuthController::class, 'forgotPassword']);
+Route::post('forgot-password', [ApiAuthController::class, 'forgotPasswordRequest']);
+Route::post('verify-otp', [ApiAuthController::class, 'verifyOTP']);
+Route::post('update-forgot-password', [ApiAuthController::class, 'forgotPasswordUpdate']);
 
 Route::get('categories', [ApiController::class, 'listCategories']);
 Route::get('brands', [ApiController::class, 'listBrands']);
 Route::get('promocodes', [ApiController::class, 'listPromocodes']);
 Route::post('frequent-bought-items', [ApiController::class, 'listFrequentItems']);
 
+Route::post('last-minute-items', [ApiController::class, 'lastMinuteItems']);
+Route::get('dynamic-pages/{page}', [ApiController::class, 'dynamicPages']);
+Route::get('payment-methods', [ApiController::class, 'paymentMethods']);
 
 Route::prefix('products')->group(function () {
 
-    Route::middleware(['auth:api', 'user_accessible'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
         Route::post('add-to-wishlist', [ApiController::class, 'addToWishlist']);
         Route::get('list-wishlist', [ApiController::class, 'ListWishlist']);
+        Route::post('remove-wishlist', [ApiController::class, 'removeWishlist']);
     });
 
     Route::post('/', [ApiController::class, 'listProducts']);
-    Route::get('/{productId}', [ApiController::class, 'productDetails']);
+    Route::get('/{productId}/{userId?}', [ApiController::class, 'productDetails']);
 
 });
 
-Route::middleware(['auth:api', 'user_accessible'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
 
     Route::post('change-password', [ApiAuthController::class, 'changePassword']);
     Route::get('logout', [ApiAuthController::class, 'logout']);
@@ -51,6 +57,8 @@ Route::middleware(['auth:api', 'user_accessible'])->group(function () {
 
     Route::post('create-order', [ApiController::class, 'createOrder']);
     Route::post('my-orders', [ApiController::class, 'listMyOrders']);
+
+    Route::post('user/profile-update', [ApiAuthController::class, 'profileUpdate']);
 
     //Cart
     Route::prefix('cart')->group(function () {
@@ -64,4 +72,12 @@ Route::middleware(['auth:api', 'user_accessible'])->group(function () {
         // Route::get('/{productId}', [ApiController::class, 'productDetails']);
 
     });
+});
+
+Route::fallback(function () {
+    return response()->json([
+        'status' => true,
+        'message' => 'Not Found',
+        'data' => null,
+    ], 404);
 });

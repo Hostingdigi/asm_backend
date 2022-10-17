@@ -17,6 +17,7 @@ class CreateCategory extends Migration
             $table->id();
             $table->bigInteger('parent_id')->default(0);
             $table->mediumText('name');
+            $table->mediumText('long_name')->nullable();
             $table->mediumText('image')->nullable();
             $table->mediumText('banner_image')->nullable();
             $table->mediumText('description');

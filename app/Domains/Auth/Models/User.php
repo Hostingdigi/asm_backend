@@ -47,7 +47,8 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
      */
     protected $fillable = [
         'type',
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'email_verified_at',
         'password',
@@ -59,6 +60,7 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
         'to_be_logged_out',
         'provider',
         'provider_id',
+        'image'
     ];
 
     /**
@@ -107,6 +109,11 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
         'roles',
     ];
 
+    public function getImageAttribute($value)
+    {
+        return !empty($value) ? asset('storage/' . $value) : null;
+    }
+
     /**
      * Send the password reset notification.
      *
@@ -121,7 +128,7 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
 
     public function scopeActiveOnly($query)
     {
-        return $query->where('active',1)->orderBy('name')->get();
+        return $query->where('active',1)->orderBy('first_name')->get();
     }
 
     /**

@@ -99,6 +99,7 @@ class CategoryController extends Controller
         $createClinic = Category::create([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
+            'long_name' => trim($request->long_name),
             'image' => $imageName,
             'banner_image' => $bannerImage,
             'description' => '',
@@ -133,7 +134,7 @@ class CategoryController extends Controller
      */
     public function edit($id)
     {
-        $data = Category::select(['id', 'parent_id', 'name', 'image', 'banner_image'])->find($id);
+        $data = Category::select(['id', 'parent_id', 'name', 'long_name', 'image', 'banner_image'])->find($id);
         $data->image = !empty($data->image) ? asset('storage/'.$data->image) : '';
         $data->banner_image = !empty($data->banner_image) ? asset('storage/'.$data->banner_image) : '';
         return response()->json([
@@ -176,6 +177,7 @@ class CategoryController extends Controller
         $createClinic = Category::where('id', $id)->update([
             'parent_id' => !empty($request->parent) ? $request->parent : 0,
             'name' => trim($request->category_name),
+            'long_name' => trim($request->long_name),
             'image' => $imageName,
             'banner_image' => $bannerImageName,
             'description' => '',
