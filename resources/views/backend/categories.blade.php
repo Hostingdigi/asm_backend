@@ -31,9 +31,19 @@
                                         @endforeach
                                     </select>
                             </div>
-                            <div class="mb-3">
-                                    <label class="col-form-label">Name</label>
-                                    <input type="text" required class="form-control" name="category_name" placeholder="Enter your category name" autofocus />
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Name</label>
+                                        <input type="text" required class="form-control" name="category_name" placeholder="Enter category name" autofocus />
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Long Name</label>
+                                        <input type="text" class="form-control" name="long_name" placeholder="(Optional)" />
+                                    </div>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <div class="row">
@@ -77,9 +87,19 @@
                                         @endforeach
                                     </select>
                             </div>
-                            <div class="mb-3">
-                                    <label class="col-form-label">Name</label>
-                                    <input type="text" required class="form-control" id="cat_name" name="category_name" placeholder="Enter your category name" autofocus />
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Name</label>
+                                        <input type="text" required class="form-control" id="cat_name" name="category_name" placeholder="Enter category name" autofocus />
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Long Name</label>
+                                        <input type="text" class="form-control" name="long_name" id="long_name" placeholder="(Optional)" />
+                                    </div>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <div class="row">
@@ -147,6 +167,7 @@
                     $("input[name='cat_id']").val(result['data']['id']);
                     $("#parent_id").val(result['data']['parent_id']);
                     $("#cat_name").val(result['data']['name']);
+                    $("#long_name").val(result['data']['long_name']);
                     if(!result['data']['image']){
                         $("#pImg").attr("src","").addClass("d-none");
                     }else{

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Passport\Passport;
+use Carbon\Carbon;
 
 /**
  * Class AuthServiceProvider.
@@ -36,10 +37,13 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Passport::routes();
+        Passport::tokensExpireIn(Carbon::now()->addDays(1));
+        Passport::refreshTokensExpireIn(Carbon::now()->addDays(30));
+        // Passport::personalAccessTokensExpireIn(Carbon::now()->addDays(30));
 
         // Learn when to use this instead: https://docs.spatie.be/laravel-permission/v3/basic-usage/super-admin/#gate-after
-//        Gate::after(function ($user) {
-//            return $user->hasAllAccess();
-//        });
+        //        Gate::after(function ($user) {
+        //            return $user->hasAllAccess();
+        //        });
     }
 }
