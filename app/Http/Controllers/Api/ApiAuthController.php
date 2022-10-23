@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Passport\Client as OClient;
 use Storage;
+use Mail;
 
 class ApiAuthController extends Controller
 {
@@ -201,11 +202,13 @@ class ApiAuthController extends Controller
                     'otp' => $randomNumber,
                 ]);
 
-                // Mail::send([], [], function ($message) use($emailAddress){
-                //     $message->to($emailAddress)
-                //         ->subject('Forgot Password Link')
-                //         ->setBody('<h1>Hi, welcome user!</h1>', 'text/html'); // for HTML rich messages
-                // });
+                $htmlContent = '<h4>Hi, '.$request->email.'!</h4><p><h2>OTP is '.$randomNumber.'</h2></p>';
+
+                Mail::send([], [], function ($message) use($emailAddress, $htmlContent){
+                    $message->to($emailAddress)
+                        ->subject('Forgot Password Link')
+                        ->setBody($htmlContent, 'text/html'); // for HTML rich messages
+                });
 
                 return returnApiResponse(true, 'Your request has been processing, please check your inbox.', [
                     'waitingTime' => 180,
@@ -255,6 +258,8 @@ class ApiAuthController extends Controller
                 return returnApiResponse(false, 'OTP is expired');
             }
 
+            PasswordForgotRequest::where([['id', '=', $isExists->id], ['status', '=', '1']])->update(['status' => '0']);
+
             return returnApiResponse(true, 'OTP is valid');
 
         } else {
@@ -266,7 +271,8 @@ class ApiAuthController extends Controller
     public function forgotPasswordUpdate(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'password' => 'required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
+            'email' => 'bail|required|email',
+            'password' => 'bail|required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -274,11 +280,9 @@ class ApiAuthController extends Controller
             return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
-        User::where('id', $isValid->user_id)->update([
+        User::where('email', $request->email)->update([
             'password' => Hash::make(trim($request->password)),
         ]);
-        $isValid->status = '2';
-        $isValid->save();
 
         return returnApiResponse(true, 'Successfully password has been reseted');
     }
