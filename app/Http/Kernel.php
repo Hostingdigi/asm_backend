@@ -86,6 +86,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'type' => \App\Domains\Auth\Http\Middleware\UserTypeCheck::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'json.response' => \App\Http\Middleware\ForceJsonResponse::class,
     ];
 
     /**
@@ -103,6 +104,6 @@ class Kernel extends HttpKernel
         \Illuminate\Session\Middleware\AuthenticateSession::class,
         \Illuminate\Routing\Middleware\SubstituteBindings::class,
         \Illuminate\Auth\Middleware\Authorize::class,
-        \App\Http\Middleware\UserAccessible::class
+        \App\Http\Middleware\ForceJsonResponse::class,
     ];
 }

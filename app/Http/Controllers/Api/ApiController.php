@@ -203,7 +203,7 @@ class ApiController extends Controller
 
         $cartItems->map(function ($row) {
 
-            $row->product->cover_image = !empty($row->product->cover_image) ? url('images/' . $row->product->cover_image) : '';
+            $row->product->cover_image = !empty($row->product->cover_image) ? url('storage/' . $row->product->cover_image) : '';
             $row->price = $row->variant->price * $row->quantity;
             $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
             $row->unit_id = $row->variant->unit_id;
@@ -315,41 +315,15 @@ class ApiController extends Controller
 
         $fetchCartDetails = $this->fetchCartItems(auth()->id());
 
+        $deliveryAmount = 0;
+        $discountAmount = 0;
+        $totalAmount = ($fetchCartDetails['cartTotal'] + $deliveryAmount) - $discountAmount;
+
         return returnApiResponse(true, 'Successfully item has been added', [
-            'total_amount' => $fetchCartDetails['cartTotal'],
-            'cart_items' => $fetchCartDetails['cartItems'],
-        ]);
-    }
-
-    public function updateItem(Request $request)
-    {
-        $isFound = Cart::where([
-            ['user_id', '=', auth()->id()],
-            ['id', '=', $request->cart_id],
-        ])->first();
-        $isRemoved = 0;
-
-        if ($isFound) {
-
-            if (!empty($request->quantity)) {
-                Cart::where([
-                    ['id', '=', $isFound->id],
-                ])->update([
-                    'variant_id' => $request->variant_id,
-                    'quantity' => $request->quantity,
-                ]);
-
-            } else {
-                Cart::where([
-                    ['id', '=', $isFound->id],
-                ])->delete();
-                $isRemoved = 1;
-            }
-        }
-
-        $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return returnApiResponse(true, 'Successfully item has been ' . ($isRemoved == 1 ? 'removed' : 'updated'), [
-            'total_amount' => $fetchCartDetails['cartTotal'],
+            'sub_total' => $fetchCartDetails['cartTotal'],
+            'delivery_amount' => $deliveryAmount,
+            'discount_amount' => $discountAmount,
+            'total_amount' => $totalAmount,
             'cart_items' => $fetchCartDetails['cartItems'],
         ]);
     }
@@ -410,13 +384,34 @@ class ApiController extends Controller
 
     public function listMyOrders(Request $request)
     {
-        $orders = Order::where('user_id', auth()->id())->get();
+        $orders = Order::where('user_id', auth()->id())
+        ->with(['payment','items'])
+        ->latest()->get()->makeHidden(['created_at','updated_at']);
+        
+        $orders = $orders->map(function($order){
+
+            $order->billing_details = unserialize($order->billing_details);
+            $order->shipping_details = unserialize($order->shipping_details);
+            
+            $order->items = $order->items->map(function($item){
+                $item->product_details = unserialize($item->product_details);
+                $item->delivery_note = 'Delivery Expected Date 22 Jul';
+                return $item;
+            });
+
+            return $order;
+        });
+        
         return returnApiResponse(true, '', $orders);
     }
 
     public function createOrder(Request $request)
     {
         $cartItems = Cart::where('user_id', auth()->id())->get();
+
+        if(empty($cartItems)){
+            return returnApiResponse(false, 'Cart is empty');
+        }
 
         $cartAmount = $taxAmount = $totalAmount = $shippingAmount = $couponAmount = $orderNo = 0;
         list($couponCode, $billingDetails, $shippingDetails, $orderItems) = [[], [], [], []];

@@ -37,7 +37,7 @@ class ApiAuthController extends Controller
             'last_name' => 'bail|required|max:50',
             'email' => 'bail|required|email|max:50|unique:users',
             'password' => 'bail|required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
-            'mobile' => 'bail|nullable|digits:10',
+            'mobile' => 'bail|nullable|min:6',
         ];
         $validator = Validator::make($request->all(), $rules);
 
@@ -60,7 +60,7 @@ class ApiAuthController extends Controller
 
         unset($user['roles']);
 
-        return returnApiResponse(true, 'Successfully user has been created', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'image']),
+        return returnApiResponse(true, 'Successfully user has been created', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token']]);
 
     }
@@ -98,7 +98,7 @@ class ApiAuthController extends Controller
 
         // $token = auth()->user()->createToken('API Token')->accessToken;
         return returnApiResponse(true, 'Successfully logged in.', [
-            'user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'image']),
+            'user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token'],
         ]);
     }
@@ -127,6 +127,7 @@ class ApiAuthController extends Controller
             'last_name' => 'bail|required',
             'password' => 'nullable|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/',
             'image' => 'sometimes|file',
+            'mobile' => 'bail|nullable|min:6',
         ]);
 
         if ($validator->fails()) {
@@ -139,6 +140,7 @@ class ApiAuthController extends Controller
         $createD = [
             'first_name' => trim($request->first_name),
             'last_name' => trim($request->last_name),
+            'mobile' => $request->mobile ?? null
         ];
 
         $passwordChanged = 0;
@@ -154,7 +156,7 @@ class ApiAuthController extends Controller
 
         User::where('id', auth()->id())->update($createD);
 
-        $userData = collect(User::find(auth()->id()))->only(['id', 'first_name', 'last_name', 'image']);
+        $userData = collect(User::find(auth()->id()))->only(['id', 'first_name', 'last_name', 'mobile', 'image']);
 
         if ($passwordChanged) {
             $token = $request->user()->token();
@@ -211,7 +213,7 @@ class ApiAuthController extends Controller
                 });
 
                 return returnApiResponse(true, 'Your request has been processing, please check your inbox.', [
-                    'waitingTime' => 180,
+                    'waitingTime' => env('FORGOT_PWD_OTP_TIMEOUT',180),
                 ]);
 
             } else {
@@ -252,7 +254,7 @@ class ApiAuthController extends Controller
             $nos = \Carbon\Carbon::now();
             $tt = \Carbon\Carbon::parse($isExists->created_at);
 
-            if ($nos->diffInSeconds($tt) > 180) {
+            if ($nos->diffInSeconds($tt) > env('FORGOT_PWD_OTP_TIMEOUT',180)) {
 
                 PasswordForgotRequest::where([['id', '=', $isExists->id], ['status', '=', '1']])->update(['status' => '0']);
                 return returnApiResponse(false, 'OTP is expired');

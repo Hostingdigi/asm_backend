@@ -86,6 +86,7 @@ class UserService extends BaseService
                 $user = $this->createUser([
                     'name' => $info->name,
                     'email' => $info->email,
+                    'mobile' => $info->mobile ?? null,
                     'provider' => $provider,
                     'provider_id' => $info->id,
                     'email_verified_at' => now(),
@@ -122,6 +123,7 @@ class UserService extends BaseService
                 'type' => $data['type'],
                 'name' => $data['name'],
                 'email' => $data['email'],
+                'mobile' => $data['mobile'] ?? null,
                 'password' => $data['password'],
                 'email_verified_at' => isset($data['email_verified']) && $data['email_verified'] === '1' ? now() : null,
                 'active' => isset($data['active']) && $data['active'] === '1',
@@ -331,6 +333,7 @@ class UserService extends BaseService
             'first_name' => $data['first_name'] ?? null,
             'last_name' => $data['last_name'] ?? null,
             'email' => $data['email'] ?? null,
+            'mobile' => $data['mobile'] ?? null,
             'password' => $data['password'] ?? null,
             'provider' => $data['provider'] ?? null,
             'provider_id' => $data['provider_id'] ?? null,
