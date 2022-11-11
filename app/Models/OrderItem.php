@@ -15,4 +15,9 @@ class OrderItem extends Model
         'total_price',
         'product_details',
     ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class,'product_id');
+    }
 }

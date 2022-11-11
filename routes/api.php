@@ -33,21 +33,23 @@ Route::group(['middleware' => ['json.response']], function () {
     Route::post('frequent-bought-items', [ApiController::class, 'listFrequentItems']);
 
     Route::post('last-minute-items', [ApiController::class, 'lastMinuteItems']);
-    Route::get('dynamic-pages/{page}', [ApiController::class, 'dynamicPages']);
+    Route::get('dynamic-pages', [ApiController::class, 'dynamicPages']);
     Route::get('payment-methods', [ApiController::class, 'paymentMethods']);
+
+    Route::middleware(['auth:api'])->group(function () {
+        Route::post('wishlist/update', [ApiController::class, 'addToWishlist']);
+        Route::get('wishlist/list', [ApiController::class, 'ListWishlist']);
+    });
 
     Route::prefix('products')->group(function () {
 
-        Route::middleware(['auth:api'])->group(function () {
-            Route::post('add-to-wishlist', [ApiController::class, 'addToWishlist']);
-            Route::get('list-wishlist', [ApiController::class, 'ListWishlist']);
-            Route::post('remove-wishlist', [ApiController::class, 'removeWishlist']);
-        });
-
         Route::post('/', [ApiController::class, 'listProducts']);
+        Route::post('search', [ApiController::class, 'searchProducts']);
         Route::get('/{productId}/{userId?}', [ApiController::class, 'productDetails']);
 
     });
+
+    Route::get('countries', [ApiController::class, 'listCountries']);
 
     Route::middleware(['auth:api'])->group(function () {
 

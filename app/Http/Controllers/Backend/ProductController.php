@@ -165,7 +165,7 @@ class ProductController extends Controller
      */
     public function edit($id)
     {
-        $sup = User::select(['id', 'name'])->role('supplier')->activeOnly();
+        $sup = User::select(['id', 'first_name', 'last_name'])->role('supplier')->activeOnly();
         $brand = Brand::select(['id', 'name'])->activeOnly();
         $category = Category::select(['id', 'name'])->activeOnly();
         $product = Product::find($id);

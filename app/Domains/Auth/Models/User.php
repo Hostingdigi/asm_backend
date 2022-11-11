@@ -115,6 +115,11 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
         return !empty($value) ? asset('storage/' . $value) : null;
     }
 
+    public function getNameAttribute()
+    {
+        return trim($this->first_name.' '.$this->last_name);
+    }
+
     /**
      * Send the password reset notification.
      *
