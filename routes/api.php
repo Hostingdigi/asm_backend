@@ -19,6 +19,8 @@ use App\Http\Controllers\Api\ApiAuthController;
 
 use App\Http\Controllers\Api\ApiController;
 
+Route::get('app-data', [ApiController::class, 'getAppData']);
+
 Route::group(['middleware' => ['json.response']], function () {
 
     Route::post('register', [ApiAuthController::class, 'register']);
@@ -45,13 +47,15 @@ Route::group(['middleware' => ['json.response']], function () {
 
         Route::post('/', [ApiController::class, 'listProducts']);
         Route::post('search', [ApiController::class, 'searchProducts']);
-        Route::get('/{productId}/{userId?}', [ApiController::class, 'productDetails']);
+        Route::post('detail', [ApiController::class, 'productDetails']);
 
     });
 
     Route::get('countries', [ApiController::class, 'listCountries']);
 
     Route::middleware(['auth:api'])->group(function () {
+
+        Route::post('promocodes/update', [ApiController::class, 'applyPromocode']);
 
         Route::post('change-password', [ApiAuthController::class, 'changePassword']);
         Route::get('logout', [ApiAuthController::class, 'logout']);

@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
 use Laravel\Passport\Client as OClient;
 use Storage;
 use Mail;
+use Illuminate\Support\Str;
 
 class ApiAuthController extends Controller
 {
@@ -32,6 +33,7 @@ class ApiAuthController extends Controller
 
     public function register(Request $request)
     {
+        // echo Str::random(40);
         $rules = [
             'first_name' => 'bail|required|max:50',
             'last_name' => 'bail|required|max:50',
@@ -60,7 +62,7 @@ class ApiAuthController extends Controller
 
         unset($user['roles']);
 
-        return returnApiResponse(true, 'Successfully user has been created', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
+        return returnApiResponse(true, 'Account created!', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token']]);
 
     }

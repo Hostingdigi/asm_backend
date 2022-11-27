@@ -171,14 +171,22 @@
                     :text="__('Settings')" />
 
                 <ul class="c-sidebar-nav-dropdown-items">
+                    
+                    <li class="c-sidebar-nav-item">
+                        <x-utils.link
+                            :href="route('admin.settings.shipping-distance-amount.index')"
+                            class="c-sidebar-nav-link"
+                            :text="__('Shipping Distance Amount')"
+                            :active="activeClass(Route::is('admin.settings.shipping-distance-amount'), 'c-active')" />
+                    </li>
 
                     <li class="c-sidebar-nav-item">
-                            <x-utils.link
-                                :href="route('admin.settings.delivery-date.index')"
-                                class="c-sidebar-nav-link"
-                                :text="__('Lock Delivery Date')"
-                                :active="activeClass(Route::is('admin.settings.delivery-date'), 'c-active')" />
-                        </li>
+                        <x-utils.link
+                            :href="route('admin.settings.delivery-date.index')"
+                            class="c-sidebar-nav-link"
+                            :text="__('Lock Delivery Date')"
+                            :active="activeClass(Route::is('admin.settings.delivery-date'), 'c-active')" />
+                    </li>
                     
                         <li class="c-sidebar-nav-item">
                             <x-utils.link

@@ -4,6 +4,8 @@ use Illuminate\Database\Seeder;
 
 class CountrySeeder extends Seeder
 {
+    use TruncateTable;
+    
     /**
      * Run the database seeds.
      *
@@ -11,6 +13,8 @@ class CountrySeeder extends Seeder
      */
     public function run()
     {
+        $this->truncate('countries');
+
         DB::table('countries')->insert([
             [
                 "id" => 1,

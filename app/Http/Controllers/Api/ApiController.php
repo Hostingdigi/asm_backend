@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Cart;
 use App\Models\CartAddress;
+use App\Models\CartCoupon;
 use App\Models\Category;
 use App\Models\CommonDatas;
 use App\Models\Countries;
@@ -19,13 +20,42 @@ use App\Rules\ValidateProduct;
 use App\Rules\validateProductIdArray;
 use App\Rules\ValidateProductVariant;
 use DB;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\CartServices;
 
 class ApiController extends Controller
 {
+
+    protected $cartServices = null;
+
+    public function __construct(CartServices $cartServices)
+    {
+        $this->cartServices = $cartServices;
+    }
+
+    public function getAppData(Request $request)
+    {
+        $headQLatLang = CommonDatas::select(['id', 'value_1 as lat', 'value_2 as lang'])->where([['key', '=', 'head-quarters-lat-lang'], ['status', '=', '1']])->first();
+        $appCurrency = CommonDatas::select(['id', 'value_1 as code', 'value_2 as name'])->where([['key', '=', 'app-currency'], ['status', '=', '1']])->first();
+        $data = [
+            'app' => [
+                'head_quarters' => [
+                    'lat' => $headQLatLang ? $headQLatLang->lat : null,
+                    'lang' => $headQLatLang ? $headQLatLang->lang : null,
+                ],
+                'currency' => [
+                    'code' => $appCurrency ? $appCurrency->code : null,
+                    'name' => $appCurrency ? $appCurrency->name : null,
+                ],
+            ],
+        ];
+
+        return returnApiResponse(true, '', $data);
+    }
+
     public function listCategories(Request $request)
     {
         $data = Category::select('id', 'name', 'long_name', 'image', 'banner_image')->where('parent_id', 0)->activeOnly();
@@ -52,8 +82,20 @@ class ApiController extends Controller
         return returnApiResponse(true, '', Brand::select(['id', 'name'])->activeOnly());
     }
 
-    public function productDetails(Request $request, $productId, $userId = null)
+    public function productDetails(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'product_id' => ['required'],
+            'user_id' => ['integer'],
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $productId = $request->product_id;
+        $userId = $request->user_id;
 
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
             'description')->with(['variants' => function ($query) {
@@ -61,20 +103,20 @@ class ApiController extends Controller
                 ->orderBy('price');
         }, 'images' => function ($query) {
             $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
-        }])->where('id', $productId)->activeOnly();
+        }])->where([['id', '=', $productId], ['status', '=', '1']])->first();
 
-        $data = $data->map(function ($row) use ($userId) {
+        if($data){
 
-            $row['supplier_name'] = $row->supplier->name;
-            $row['category_name'] = Category::find($row->category_id)->name;
-            $row['brand_name'] = !empty($row->brand_id) ? Brand::find($row->brand_id)->name : '';
-            $row['cover_image'] = $row->formatedcoverimageurl;
-            $row['is_added_wishlist'] = !empty($userId) ? ProductWishlist::where([
+            $data->supplier_name = $data->supplier->name;
+            $data->category_name = Category::find($data->category_id)->name;
+            $data->brand_name = !empty($data->brand_id) ? Brand::find($data->brand_id)->name : '';
+            $data->cover_image = $data->formatedcoverimageurl;
+            $data->is_added_wishlist = !empty($userId) ? ProductWishlist::where([
                 'user_id' => $userId,
-                'product_id' => $row->id,
+                'product_id' => $data->id,
             ])->exists() : false;
 
-            $row['images'] = $row['images']->map(function ($img) {
+            $data->images = $data->images->map(function ($img) {
 
                 $img['file_name'] = $img->formatedimageurl;
 
@@ -82,10 +124,10 @@ class ApiController extends Controller
                 return $img;
             });
 
-            $row['variants'] = $row['variants']->map(function ($var) use ($userId) {
+            $data->variants = $data->variants->map(function ($var) use ($userId) {
                 $var['name'] = $var->name . ' ' . $var->unit->name;
 
-                $cart_quantity = $userId ? Cart::where([['user_id', '=', $userId], ['product_id', '=', $var['product_id']], ['variant_id', '=', $var['id']]])->first() : [];
+                $cart_quantity = !empty($userId) ? Cart::where([['user_id', '=', $userId], ['product_id', '=', $var['product_id']], ['variant_id', '=', $var['id']]])->first() : [];
                 $var['cart_quantity'] = $cart_quantity ? $cart_quantity->quantity : 0;
 
                 unset($var['product_id']);
@@ -94,11 +136,10 @@ class ApiController extends Controller
                 return $var;
             });
 
-            unset($row['supplier']);
-            return $row;
-        });
+            unset($data->supplier);
+        }
 
-        return returnApiResponse(true, '', $data);
+        return returnApiResponse(!empty($data) ? true : false, !empty($data) ? '' : 'Product is not available', !empty($data) ? $data : null);
     }
 
     public function lastMinuteItems(Request $request)
@@ -127,12 +168,41 @@ class ApiController extends Controller
 
         $products = $products->activeOnly();
 
-        $products = $products->map(function ($row) {
-            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
-            return $row;
-        });
+        $productsByVariants = [];
+        // $products = $products->map(function ($row) use($productsByVariants) {
+        //     $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
 
-        return returnApiResponse(true, '', $products);
+        //     foreach($row->variants as $item){
+
+        //         $itemArray = [
+        //             'variant' => $item->id
+        //         ];
+
+        //         array_push($productsByVariants,$itemArray);
+        //     }
+
+        //     return $row;
+        // });
+
+        foreach ($products as $key => $product) {
+            foreach ($product->variants as $variant) {
+
+                $itemArray = [
+                    'id' => $product->id,
+                    'code' => $product->code,
+                    'name' => $product->name,
+                    'cover_image' => $product->formatedcoverimageurl,
+                ];
+                $itemArray['variant'] = [
+                    'id' => $variant->id,
+                    'name' => $variant->name . ' ' . $variant->unit->name,
+                    'price' => $variant->price,
+                ];
+                array_push($productsByVariants, $itemArray);
+            }
+        }
+
+        return returnApiResponse(true, '', $productsByVariants);
 
     }
 
@@ -186,8 +256,6 @@ class ApiController extends Controller
                     return $var;
                 });
 
-                $row['cart_details'] = !empty($userId) ? Cart::select(['id as cart_id', 'variant_id', 'quantity'])->where([['user_id', '=', $userId], ['product_id', '=', $row->id]])->first() : null;
-
                 unset($row['supplier']);
                 return $row;
             });
@@ -200,54 +268,9 @@ class ApiController extends Controller
         ]);
     }
 
-    public function fetchCartItems($userId)
-    {
-        $cartTotal = 0;
-        $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity'])->where('user_id', $userId)
-            ->with(['product' => function ($query) {
-                $query->select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
-                    $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])->with(['unit:id,name']);
-                }]);
-            }])->latest()->get();
-
-        $cartItems->map(function ($row) {
-
-            $row->product->cover_image = !empty($row->product->cover_image) ? url('storage/' . $row->product->cover_image) : '';
-            $row->price = $row->variant->price * $row->quantity;
-            $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
-            $row->unit_id = $row->variant->unit_id;
-            $row->unit_name = $row->variant->name . $row->variant->unit->name;
-
-            unset($row->variant);
-            return $row;
-        });
-
-        $cartTotal = $cartItems->sum('price');
-        $deliveryAmount = 0;
-        $discountAmount = 0;
-        $totalAmount = number_format((($cartTotal + $deliveryAmount) - $discountAmount), 2);
-
-        return ['cartTotal' => number_format($cartTotal, 2),
-            'deliveryAmount' => $deliveryAmount,
-            'discountAmount' => $discountAmount,
-            'totalAmount' => $totalAmount,
-            'cartItems' => $cartItems,
-        ];
-
-    }
-
     public function listCartItems(Request $request)
     {
-        $fetchCartDetails = $this->fetchCartItems(auth()->id());
-
-        return returnApiResponse(true, '', [
-            'sub_total' => $fetchCartDetails['cartTotal'],
-            'delivery_amount' => $fetchCartDetails['deliveryAmount'],
-            'discount_amount' => $fetchCartDetails['discountAmount'],
-            'total_amount' => $fetchCartDetails['totalAmount'],
-            'cart_items' => $fetchCartDetails['cartItems'],
-        ]);
-
+        return returnApiResponse(true, '', $this->cartServices->listItems());
     }
 
     public function addItem(Request $request)
@@ -327,44 +350,37 @@ class ApiController extends Controller
             }
         }
 
-        $fetchCartDetails = $this->fetchCartItems(auth()->id());
-
-        return returnApiResponse(true, ($request->action == 'add' ? 'Item added!' : 'Item Updated!'), [
-            'sub_total' => $fetchCartDetails['cartTotal'],
-            'delivery_amount' => $fetchCartDetails['deliveryAmount'],
-            'discount_amount' => $fetchCartDetails['discountAmount'],
-            'total_amount' => $fetchCartDetails['totalAmount'],
-            'cart_items' => $fetchCartDetails['cartItems'],
-        ]);
+        return returnApiResponse(true, ($request->action == 'add' ? 'Item added!' : 'Item Updated!'), $this->cartServices->listItems());
     }
 
     public function removeItem(Request $request)
     {
-        Cart::where([
+        $isExists = Cart::where([
             ['user_id', '=', auth()->id()],
             ['id', '=', $request->cart_id],
-        ])->delete();
-        $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return returnApiResponse(true, 'Item removed!', [
-            'sub_total' => $fetchCartDetails['cartTotal'],
-            'delivery_amount' => $fetchCartDetails['deliveryAmount'],
-            'discount_amount' => $fetchCartDetails['discountAmount'],
-            'total_amount' => $fetchCartDetails['totalAmount'],
-            'cart_items' => $fetchCartDetails['cartItems'],
-        ]);
+        ])->first();
+
+        if($isExists){
+            Cart::where([
+                ['user_id', '=', auth()->id()],
+                ['id', '=', $request->cart_id],
+            ])->delete();
+        }
+
+        if(count($this->cartServices->listItems())==0){
+            CartCoupon::where('user_id', auth()->id())->delete();
+        }
+
+        return returnApiResponse($isExists ? true : false, $isExists ? 'Item removed!' : 'Item is not found.', $isExists ? $this->cartServices->listItems() : null);
     }
 
     public function clearCart(Request $request)
     {
-        Cart::where('user_id', auth()->id())->delete();
-        $fetchCartDetails = $this->fetchCartItems(auth()->id());
-        return returnApiResponse(true, 'Cart cleared!', [
-            'sub_total' => $fetchCartDetails['cartTotal'],
-            'delivery_amount' => $fetchCartDetails['deliveryAmount'],
-            'discount_amount' => $fetchCartDetails['discountAmount'],
-            'total_amount' => $fetchCartDetails['totalAmount'],
-            'cart_items' => $fetchCartDetails['cartItems'],
-        ]);
+        if (Cart::where('user_id', auth()->id())->count()) {
+            Cart::where('user_id', auth()->id())->delete();
+            CartCoupon::where('user_id', auth()->id())->delete();
+        }
+        return returnApiResponse(true, 'Cleared!', $this->cartServices->listItems());
     }
 
     public function saveAddress(Request $request)
@@ -505,7 +521,7 @@ class ApiController extends Controller
                     'category_name' => $product->category->name,
                     'brand_id' => $product->brand_id,
                     'brand_name' => $product->brand->name ?? '',
-                    'image' => $product->cover_image,
+                    'image' => $product->formatedcoverimageurl,
                     'variant_name' => $value->variant->name,
                     'unit_name' => $value->variant->unit->name,
                 ];
@@ -615,7 +631,7 @@ class ApiController extends Controller
         $data = ProductWishlist::with(['product' => function ($query) {
             $query->select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
                 'description')->with('variants:id,product_id,name,price,unit_id');
-        }])->latest()->get();
+        }])->where('user_id', auth()->id())->latest()->get();
 
         $products = [];
 
@@ -626,13 +642,63 @@ class ApiController extends Controller
             $product->category_name = Category::find($product->category_id)->name;
             $product->brand_name = !empty($product->brand_id) ? Brand::find($product->brand_id)->name : '';
 
-            $product->cover_image = !empty($product->cover_image) ? url('storage/' . $product->cover_image) : '';
+            $product->cover_image = $product->formatedcoverimageurl;
             array_push($products, $row->product);
             unset($product->supplier);
 
         }
 
         return returnApiResponse(true, '', $products);
+    }
+
+    public function applyPromocode(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'coupon_id' => 'required|integer',
+            'action' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        if ($request->action == 'remove') {
+            CartCoupon::where('coupon_id', $request->coupon_id)->delete();
+            return returnApiResponse(true, 'Removed!');
+        }
+
+        $isActive = Coupon::where('status', '1')->find($request->coupon_id);
+
+        if (!$isActive) {
+            return returnApiResponse(false, 'Coupon id is not available');
+        }
+
+        $isAlreadyApplied = CartCoupon::where([
+            ['user_id', '=', auth()->id()],
+            ['status', '=', '1'],
+        ])->first();
+
+        if ($isAlreadyApplied) {
+
+            if ($isAlreadyApplied->coupon_id != $isActive->id) {
+                $isAlreadyApplied->coupon_id = $isActive->id;
+                $isAlreadyApplied->save();
+            } else {
+                return returnApiResponse(true, 'Already applied!');
+            }
+
+            return returnApiResponse(true, 'Applied!');
+
+        }
+
+        CartCoupon::create([
+            'user_id' => auth()->id(),
+            'coupon_id' => $isActive->id,
+        ]);
+
+        return returnApiResponse(true, 'Applied!');
+
     }
 
     public function listPromocodes(Request $request)
@@ -648,27 +714,52 @@ class ApiController extends Controller
 
     public function listFrequentItems(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'page' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $limitCount = !in_array($request->page, [0, 1]) ? 20 * $request->page : 0;
+
+        $frequentItemsTotal = OrderItem::groupBy('product_id')->get()->count();
+
+        if ($frequentItemsTotal >= $limitCount) {
+
+        }
+
         $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
-            ->orderBy('sale_count', 'desc')->get();
+            ->orderBy('sale_count', 'desc')
+            ->offset($limitCount)
+            ->limit(20)
+            ->get();
 
         $productIds = !empty($frequentItems) ? $frequentItems->pluck(['product_id']) : [];
 
         $products = Product::select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
-            $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+            $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1')->orderBy('price');
         }]);
 
         if (count($productIds) > 0) {
             $products = $products->whereIn('id', $productIds);
+        } else {
+            $products = $products->offset($limitCount)->limit(20);
         }
 
         $products = $products->activeOnly();
 
         $products = $products->map(function ($row) {
-            $row['cover_image'] = !empty($row->cover_image) ? url('storage/' . $row->cover_image) : '';
+            $row['cover_image'] = $row->formatedcoverimageurl;
             return $row;
         });
 
-        return returnApiResponse(true, '', $products);
+        return returnApiResponse(true, '', [
+            'is_last_page' => true,
+            'items' => $products,
+        ]);
     }
 
     public function dynamicPages(Request $request)
@@ -718,38 +809,68 @@ class ApiController extends Controller
         $collectionProductIds = [];
 
         //search by product name
-        $searchByProductNameIds = Product::whereRaw("LOWER(name) LIKE '%".strtolower($searchKey)."%'")->activeOnly()
+        $searchByProductNameIds = Product::whereRaw("LOWER(name) LIKE '%" . strtolower($searchKey) . "%'")->activeOnly()
             ->pluck('id')->toArray();
-        if(!empty($searchByProductNameIds)){
+        if (!empty($searchByProductNameIds)) {
             $collectionProductIds = array_merge($collectionProductIds, $searchByProductNameIds);
         }
 
         //search by category name & id
-        $searchByCategoryIds = Product::where([['category_id','=',$searchKey],['status','=','1']])
+        $searchByCategoryIds = Product::where([['category_id', '=', $searchKey], ['status', '=', '1']])
             ->whereHas('category', function (Builder $query) {
                 $query->where('status', '1');
             })->get()
             ->pluck('id')->toArray();
 
-        if(!empty($searchByCategoryIds)){
+        if (!empty($searchByCategoryIds)) {
             $collectionProductIds = array_merge($collectionProductIds, $searchByCategoryIds);
         }
 
-        $searchByCategoryName = Product::where('status','1')
-            ->whereHas('category', function (Builder $query) use($searchKey){
-                $query->where('status', '1')->whereRaw("LOWER(name) LIKE '%".strtolower($searchKey)."%'");
+        $searchByCategoryName = Product::where('status', '1')
+            ->whereHas('category', function (Builder $query) use ($searchKey) {
+                $query->where('status', '1')->whereRaw("LOWER(name) LIKE '%" . strtolower($searchKey) . "%'");
             })->get()
             ->pluck('id')->toArray();
 
-        if(!empty($searchByCategoryName)){
+        if (!empty($searchByCategoryName)) {
             $collectionProductIds = array_merge($collectionProductIds, $searchByCategoryName);
         }
 
         $data = [];
-        if(!empty($collectionProductIds)){
-            $data = Product::whereIn('id',array_unique($collectionProductIds))->get();
+        if (!empty($collectionProductIds)) {
+
+            $data = Product::select('id', 'code', 'name', 'cover_image', 'description')
+                ->with(['variants' => function ($query) {
+                    $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
+                }, 'images' => function ($query) {
+                    $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
+                }])
+                ->whereIn('id', array_unique($collectionProductIds))->activeOnly();
+
+            $data = $data->map(function ($row) {
+
+                $row['cover_image'] = $row->formatedcoverimageurl;
+
+                $row['images'] = $row['images']->map(function ($img) {
+                    $img['file_name'] = $img->formatedimageurl;
+                    unset($img['product_id']);
+                    return $img;
+                });
+
+                $row['variants'] = $row['variants']->map(function ($var) {
+                    $var['name'] = $var->name . $var->unit->name;
+                    unset($var['product_id']);
+                    unset($var['unit_id']);
+                    unset($var['unit']);
+                    return $var;
+                });
+
+                unset($row['supplier']);
+                return $row;
+            });
+
         }
-        
+
         return returnApiResponse(true, '', $data);
     }
 }

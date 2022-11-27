@@ -103,6 +103,9 @@ Route::prefix('settings')->group(function () {
     Route::post('delivery-date/remove-day', 'Backend\DeliveryDateController@removeDay')->name('settings.delivery-date.removeDay');
     Route::post('delivery-date/save-date', 'Backend\DeliveryDateController@saveDate')->name('settings.delivery-date.saveDate');
 
+    Route::get('shipping-distance-amount', 'Backend\ShippingDistanceAmountController@index')->name('settings.shipping-distance-amount.index');
+    Route::post('shipping-distance-amount-store', 'Backend\ShippingDistanceAmountController@store')->name('settings.shipping-distance-amount.store');
+
 });
 
 Route::resource('products', 'Backend\ProductController')->names([

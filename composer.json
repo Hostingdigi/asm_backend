@@ -29,6 +29,7 @@
         "rappasoft/lockout": "^2.1",
         "spatie/laravel-activitylog": "^3.14",
         "spatie/laravel-permission": "^3.11",
+        "stripe/stripe-php": "^10.0",
         "tabuna/breadcrumbs": "^1.0",
         "yajra/laravel-datatables-oracle": "^9.21"
     },

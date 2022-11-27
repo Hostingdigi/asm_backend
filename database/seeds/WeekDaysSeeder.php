@@ -5,6 +5,8 @@ use Illuminate\Database\Seeder;
 
 class WeekDaysSeeder extends Seeder
 {
+    use TruncateTable;
+    
     /**
      * Run the database seeds.
      *
@@ -12,6 +14,8 @@ class WeekDaysSeeder extends Seeder
      */
     public function run()
     {
+        $this->truncate('delivery_week_days');
+
         for ($i = 0; $i < 7; $i++) {
             $dayName = jddayofweek($i, 1);
             WeekDaysModel::create([
