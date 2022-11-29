@@ -15,9 +15,11 @@ class CreatePaymentsTable extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->enum('order_type', ['cod', 'online'])->default('cod');
+            $table->mediumText('order_type')->default('pod');
             $table->unsignedBigInteger('order_id');
-            $table->enum('status', ['0', '1'])->default('1');
+            $table->tinyInteger('status')->default(0);
+            $table->tinyInteger('row_status')->default(0);
+            $table->longText('sent_response')->nullable();
             $table->longText('payment_response')->nullable();
             $table->timestamps();
         });

@@ -8,6 +8,12 @@ use App\Models\CommonDatas;
 
 class CartServices
 {
+    public function clearUserCart()
+    {
+        CartCoupon::where('user_id', auth()->id())->delete();
+        Cart::where('user_id', auth()->id())->delete();
+    }
+
     public function listItems()
     {
         $cartTotal = 0;
@@ -33,15 +39,16 @@ class CartServices
         $cartTotal = $cartItems->sum('price');
         $discountAmount = $this->coupounCalculations(['cartTotal' => $cartTotal]);
         $deliveryAmount = $this->shippingCalculations([
-                'cartTotal' => ($cartTotal - $discountAmount['discountAmount'])
+            'cartTotal' => ($cartTotal - $discountAmount['discountAmount']),
         ]);
-        $totalAmount = (($cartTotal + $deliveryAmount) - $discountAmount['discountAmount']);    
-        
+        $totalAmount = (($cartTotal + $deliveryAmount) - $discountAmount['discountAmount']);
+
         return [
             'sub_total' => number_format($cartTotal, 2),
-            'delivery_amount' => number_format($deliveryAmount,2),
-            'discount_amount' => number_format($discountAmount['discountAmount'],2),
+            'delivery_amount' => number_format($deliveryAmount, 2),
+            'discount_amount' => number_format($discountAmount['discountAmount'], 2),
             'total_amount' => number_format($totalAmount, 2),
+            'unformatted_total_amount' => $totalAmount,
             'coupon_details' => $discountAmount['couponDetails'],
             'cart_items' => $cartItems,
         ];
@@ -62,12 +69,12 @@ class CartServices
             if ($couponDetails) {
                 $couponDetails->image = $couponDetails->formatedimageurl;
                 $discountAmount = ($couponDetails->coupon_type == 'percentage') ? (($data['cartTotal'] * $couponDetails->offer_value) / 100) :
-                    $couponDetails->offer_value;
+                $couponDetails->offer_value;
             }
         }
         return [
             'couponDetails' => $couponDetails,
-            'discountAmount' => $discountAmount
+            'discountAmount' => $discountAmount,
         ];
     }
 
@@ -78,14 +85,13 @@ class CartServices
         //Check if free shipping available
         $isFreeShipping = CommonDatas::select(['id', 'value_1'])->where([['key', '=', 'free-shipping-config'], ['status', '=', '1']])->first();
 
-        if($isFreeShipping){
-            if($data['cartTotal'] > $isFreeShipping->value_1){
+        if ($isFreeShipping) {
+            if ($data['cartTotal'] > $isFreeShipping->value_1) {
                 return $shippingAmount;
             }
         }
 
-        //Calculate shipping price based on KM 
-
+        //Calculate shipping price based on KM
 
         return $shippingAmount;
     }

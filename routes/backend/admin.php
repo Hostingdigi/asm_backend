@@ -136,6 +136,7 @@ Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
         $trail->push(__('Home'), route('admin.dashboard'))
             ->push(__('Orders'), '');
     });
-    Route::post('orders/{orderId}', 'Backend\OrderController@orderDetail')->name('orderDetail');
+    Route::get('detail/{orderId}', 'Backend\OrderController@orderDetail')->name('orderDetail');
+    Route::post('change-status', 'Backend\OrderController@changeStatus')->name('changeStatus');
 
 });

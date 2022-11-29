@@ -19,21 +19,24 @@ use App\Models\ProductWishlist;
 use App\Rules\ValidateProduct;
 use App\Rules\validateProductIdArray;
 use App\Rules\ValidateProductVariant;
+use App\Services\CartServices;
+use App\Services\PaymentServices;
 use DB;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use App\Services\CartServices;
 
 class ApiController extends Controller
 {
 
     protected $cartServices = null;
+    protected $paymentServices = null;
 
-    public function __construct(CartServices $cartServices)
+    public function __construct(CartServices $cartServices, PaymentServices $paymentServices)
     {
         $this->cartServices = $cartServices;
+        $this->paymentServices = $paymentServices;
     }
 
     public function getAppData(Request $request)
@@ -50,6 +53,8 @@ class ApiController extends Controller
                     'code' => $appCurrency ? $appCurrency->code : null,
                     'name' => $appCurrency ? $appCurrency->name : null,
                 ],
+                'address_types' => CommonDatas::select(['value_1 as key', 'value_2 as label'])
+                    ->where([['key', '=', 'address_types'], ['status', '=', '1']])->orderBy('value_2')->get(),
             ],
         ];
 
@@ -105,7 +110,7 @@ class ApiController extends Controller
             $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
         }])->where([['id', '=', $productId], ['status', '=', '1']])->first();
 
-        if($data){
+        if ($data) {
 
             $data->supplier_name = $data->supplier->name;
             $data->category_name = Category::find($data->category_id)->name;
@@ -360,18 +365,54 @@ class ApiController extends Controller
             ['id', '=', $request->cart_id],
         ])->first();
 
-        if($isExists){
+        if ($isExists) {
             Cart::where([
                 ['user_id', '=', auth()->id()],
                 ['id', '=', $request->cart_id],
             ])->delete();
         }
 
-        if(count($this->cartServices->listItems())==0){
+        if (count($this->cartServices->listItems()) == 0) {
             CartCoupon::where('user_id', auth()->id())->delete();
         }
 
         return returnApiResponse($isExists ? true : false, $isExists ? 'Item removed!' : 'Item is not found.', $isExists ? $this->cartServices->listItems() : null);
+    }
+
+    public function cartCheckout(Request $request, CartAddress $cartAddress)
+    {
+        $request['id'] = !empty($request->address_id) ? $request->address_id : null;
+
+        $validator = Validator::make($request->all(), [
+            'id' => [
+                'bail', 'required', 'integer',
+                Rule::exists('cart_address')->where(function ($query) {
+                    $query->where([['status', '=', '1'], ['user_id', '=', auth()->id()]]);
+                }),
+            ],
+        ], [], [
+            'id' => 'address id',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $cartDetails = $this->cartServices->listItems();
+
+        $data = [
+            'delivery_note' => [
+                'label' => 'Delivery Expected',
+                'date' => '22 Jul',
+            ],
+            'total_amount' => $cartDetails['total_amount'],
+            'coupon_details' => $cartDetails['coupon_details'],
+            'address_details' => CartAddress::select($cartAddress->addressFields())->find($request->address_id),
+        ];
+
+        return returnApiResponse(true, '', $data);
+
     }
 
     public function clearCart(Request $request)
@@ -388,11 +429,12 @@ class ApiController extends Controller
         if (in_array($request->action, ['save', 'update'])) {
             $billing = $request->address;
             $shippingAddress = [
+                "address_type" => $billing['address_type'],
+                "address_type_label" => $billing['address_type_label'],
                 "user_id" => auth()->id(),
                 "name" => $billing['name'],
                 "email_address" => $billing['email'],
                 "mobile" => $billing['mobile'],
-                "address_type" => '1',
                 "address" => $billing['address'],
                 "city" => $billing['city'],
                 "state" => $billing['state'],
@@ -456,7 +498,7 @@ class ApiController extends Controller
                 }
 
                 if (!empty($productDetails)) {
-                    $productDetails['image'] = !empty($productDetails['image']) ? asset('storage/' . $productDetails['image']) : null;
+                    $productDetails['image'] = $productDetails['image'];
                 }
 
                 $orderItem['item']['product_details'] = $productDetails;
@@ -473,11 +515,12 @@ class ApiController extends Controller
         return returnApiResponse(true, '', $itemsData);
     }
 
-    public function createOrder(Request $request)
+    public function createOrder(Request $request, CartAddress $cartAddress)
     {
         $validator = Validator::make($request->all(), [
             'payment_mode' => 'bail|required',
             'address_id' => 'bail|required|integer',
+            'payment_status' => 'bail|required|integer',
         ]);
 
         if ($validator->fails()) {
@@ -486,17 +529,48 @@ class ApiController extends Controller
         }
 
         $cartItems = Cart::where('user_id', auth()->id())->get();
-
-        if (empty($cartItems)) {
+        if (!count($cartItems)) {
             return returnApiResponse(false, 'Cart is empty');
         }
 
+        if ($request->payment_mode == 'card') {
+            $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();
+
+            Order::where('id', $isOrderExists->id)->update([
+                'is_dummy_order' => 0,
+                'payment_status' => $request->payment_status
+            ]);
+
+            Payment::where('order_id',$isOrderExists->id,)->update([
+                'status' => $request->payment_status,
+                'payment_response' => serialize(!empty($request->return_response) ? $request->return_response : []),
+            ]);
+
+            if($request->payment_status){
+                $this->cartServices->clearUserCart();
+            }
+
+            return returnApiResponse(true, 'Order created!', [
+                'order_id ' => $isOrderExists->id,
+                'payment_status' => $request->payment_status,
+                'payment_mode' => 'card'
+            ]);
+        }
+
+        // if ($request->payment_mode == 'card') {
+
+        //     $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
+
+        //     if (!$stripeConfig) {
+        //         return returnApiResponse(false, 'Stripe configuation is not available');
+        //     }
+        // }
+
         $cartAmount = $taxAmount = $totalAmount = $shippingAmount = $couponAmount = $orderNo = 0;
         list($couponCode, $billingDetails, $shippingDetails, $orderItems) = [[], [], [], []];
-        $addressFields = ['name', 'email_address', 'mobile', 'address', 'city', 'state', 'zipcode', 'country_id'];
 
         $shippingDetails = CartAddress::where([['user_id', '=', auth()->id()], ['id', '=', $request->address_id]])
-            ->select($addressFields)->first();
+            ->select($cartAddress->addressFields())->first();
 
         if (empty($shippingDetails)) {
             return returnApiResponse(false, 'Shipping address is empty');
@@ -521,7 +595,7 @@ class ApiController extends Controller
                     'category_name' => $product->category->name,
                     'brand_id' => $product->brand_id,
                     'brand_name' => $product->brand->name ?? '',
-                    'image' => $product->formatedcoverimageurl,
+                    'image' => $product->cover_image,
                     'variant_name' => $value->variant->name,
                     'unit_name' => $value->variant->unit->name,
                 ];
@@ -550,6 +624,7 @@ class ApiController extends Controller
             //Create order
             $orderData = [
                 'order_no' => $orderNo,
+                'payment_mode' => $request->payment_mode,
                 'user_id' => auth()->id(),
                 'total_amount' => $totalAmount,
                 'tax_amount' => $taxAmount,
@@ -564,11 +639,12 @@ class ApiController extends Controller
             $order = Order::create($orderData);
 
             //Update payment
+            $sent_response = [];
             $payment = Payment::create([
-                'order_type' => 'cod',
+                'order_type' => $request->payment_mode,
                 'order_id' => $order->id,
-                'status' => (string) rand(0, 1),
-                'payment_response' => serialize([])
+                'status' => 0,
+                'sent_response' => serialize($sent_response),
             ]);
             Order::where('id', $order->id)->update(['payment_id' => $payment->id]);
 
@@ -580,11 +656,30 @@ class ApiController extends Controller
             });
             OrderItem::insert($orderItems);
 
+            //create stripe
+            // if ($request->payment_mode == 'card') {
+            //     $stripeResults = $this->paymentServices->createStripePaymentIntend($order->id, $payment->id);
+
+            //     if ($stripeResults[0] == false) {
+            //         return returnApiResponse(false, $stripeResults[1], $stripeResults[2] ?? null);
+            //     }
+
+            //     //Clear cart items
+            //     Cart::where('user_id', auth()->id())->delete();
+
+            //     return returnApiResponse(true, 'Order created!', [
+            //         'order_id ' => $order->id,
+            //         'stripe_details' => $stripeResults[2] ?? null,
+            //     ]);
+            // }
+
             //Clear cart items
-            Cart::where('user_id', auth()->id())->delete();
+            $this->cartServices->clearUserCart();
 
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $order->id,
+                'payment_status' => 0,
+                'payment_mode' => 'pod'
             ]);
         }
 
@@ -772,17 +867,12 @@ class ApiController extends Controller
     {
         return returnApiResponse(true, '', [
             [
-                'type' => 'credit_card',
+                'type' => 'card',
                 'name' => 'Credit Card',
                 'notes' => '',
             ],
             [
-                'type' => 'debit_card',
-                'name' => 'Debit Card',
-                'notes' => '',
-            ],
-            [
-                'type' => 'cod',
+                'type' => 'pod',
                 'name' => 'Pay On Delivery',
                 'notes' => 'Pay with cash',
             ],
@@ -792,6 +882,23 @@ class ApiController extends Controller
     public function listCountries(Request $request)
     {
         return returnApiResponse(true, '', Countries::activeOnly());
+    }
+
+    public function searchProductNames(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'key' => 'required|min:3',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        //search by product name
+        $data = Product::select(['id', 'name'])->whereRaw("LOWER(name) LIKE '%" . strtolower(trim($request->key)) . "%'")->activeOnly();
+
+        return returnApiResponse(true, '', $data);
     }
 
     public function searchProducts(Request $request)
@@ -872,5 +979,66 @@ class ApiController extends Controller
         }
 
         return returnApiResponse(true, '', $data);
+    }
+
+    public function updatecardStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'bail|required|exists:orders,id',
+            'status' => 'bail|required',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $order = Order::find($request->order_id);
+
+        if ($order->payment_mode != 'card') {
+            return returnApiResponse(false, 'Payment mode is not card.');
+        }
+
+        if ($order->payment_status == 1) {
+            return returnApiResponse(false, 'Payment is already done.');
+        }
+
+        $order->payment_status = $request->status;
+        $order->save();
+
+        Payment::where([['order_id', '=', $order->id]])->update(['status' => $request->status]);
+
+        return returnApiResponse(true, 'Payment status updated successfully.');
+    }
+
+    public function updatePodStatus(Request $request)
+    {
+
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'bail|required|exists:orders,id',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $order = Order::find($request->order_id);
+
+        if ($order->payment_mode != 'pod') {
+            return returnApiResponse(false, 'Payment mode is not pod.');
+        }
+
+        if ($order->payment_status == 1) {
+            return returnApiResponse(false, 'Payment is already done.');
+        }
+
+        $order->payment_status = 1;
+        $order->save();
+
+        Payment::where([['order_id', '=', $order->id]])->update(['status' => 1]);
+
+        return returnApiResponse(true, 'Payment is received successfully.');
+
     }
 }

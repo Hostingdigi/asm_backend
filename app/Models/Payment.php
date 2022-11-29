@@ -7,7 +7,7 @@ use \Carbon\Carbon;
 
 class Payment extends Model
 {
-    protected $fillable = ['order_type', 'order_id', 'status', 'payment_response'];
+    protected $fillable = ['order_type', 'order_id', 'status', 'row_status', 'sent_response', 'payment_response'];
 
     public function getCreatedAtAttribute($value)
     {

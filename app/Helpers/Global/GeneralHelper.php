@@ -1,6 +1,7 @@
 <?php
 
 use Carbon\Carbon;
+use App\Models\Countries;
 
 if (! function_exists('returnApiResponse')) {
     /**
@@ -64,5 +65,22 @@ if (! function_exists('homeRoute')) {
         }
 
         return 'frontend.index';
+    }
+}
+
+
+if (!function_exists('countryName')) {
+    /**
+     * Return the route to the "home" page depending on authentication/authorization status.
+     *
+     * @return string
+     */
+    function countryName($countryId = null)
+    {
+        if (!empty($countryId)) {
+            return Countries::find($countryId);
+        }
+
+        return null;
     }
 }

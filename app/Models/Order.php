@@ -8,7 +8,9 @@ use App\Domains\Auth\Models\User;
 class Order extends Model
 {
     protected $fillable = [
+        'is_dummy_order',
         'order_no',
+        'payment_mode',
         'user_id',
         'payment_id',
         'total_amount',
@@ -20,6 +22,7 @@ class Order extends Model
         'billing_details',
         'shipping_details',
         'ordered_at',
+        'payment_status'
     ];
 
     public function customer()

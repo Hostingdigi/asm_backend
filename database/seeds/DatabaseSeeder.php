@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AnnouncementSeeder::class);
         $this->call(CountrySeeder::class);
         $this->call(FreeShippingSeeder::class);
+        $this->call(AddressTypeSeeder::class);
         // $this->call(CreateOrderStatusSeeder::class);
 
         Model::reguard();

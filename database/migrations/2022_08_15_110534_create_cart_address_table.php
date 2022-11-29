@@ -16,7 +16,8 @@ class CreateCartAddressTable extends Migration
         Schema::create('cart_address', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->enum('address_type',['0','1'])->default('0')->comment('0 is billing, 1 is shipping');
+            $table->mediumText('address_type')->default('other');
+            $table->mediumText('address_type_label')->nullable();
             $table->mediumText('name')->nullable();
             $table->mediumText('email_address')->nullable();
             $table->mediumText('mobile')->nullable();

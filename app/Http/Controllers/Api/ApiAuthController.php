@@ -16,19 +16,22 @@ use Laravel\Passport\Client as OClient;
 use Storage;
 use Mail;
 use Illuminate\Support\Str;
+use App\Services\PaymentServices;
 
 class ApiAuthController extends Controller
 {
     protected $userService;
+    protected $paymentServices = null;
 
     /**
      * RegisterController constructor.
      *
      * @param  UserService  $userService
      */
-    public function __construct(UserService $userService)
+    public function __construct(UserService $userService, PaymentServices $paymentServices)
     {
         $this->userService = $userService;
+        $this->paymentServices = $paymentServices;
     }
 
     public function register(Request $request)
@@ -62,7 +65,13 @@ class ApiAuthController extends Controller
 
         unset($user['roles']);
 
-        return returnApiResponse(true, 'Account created!', ['user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
+        //Create stripe customer
+        $this->paymentServices->createSripeCustomer($user->id);
+
+        $userData = User::find($user->id);
+
+        return returnApiResponse(true, 'Account created!', ['user' => collect($userData)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 
+            'image', 'stripe_cust_id']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token']]);
 
     }
@@ -98,9 +107,12 @@ class ApiAuthController extends Controller
         $oClient = OClient::where('password_client', 1)->first();
         $tokens = $this->getTokenAndRefreshToken($oClient, request('email'), request('password'));
 
+        //Create stripe customer
+        $this->paymentServices->createSripeCustomer($user->id);
+
         // $token = auth()->user()->createToken('API Token')->accessToken;
         return returnApiResponse(true, 'Successfully logged in.', [
-            'user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image']),
+            'user' => collect($user)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 'image', 'stripe_cust_id']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token'],
         ]);
     }

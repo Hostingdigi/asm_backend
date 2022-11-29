@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ApiAuthController;
 //});
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Controllers\Api\PaymentController;
 
 Route::get('app-data', [ApiController::class, 'getAppData']);
 
@@ -46,6 +47,7 @@ Route::group(['middleware' => ['json.response']], function () {
     Route::prefix('products')->group(function () {
 
         Route::post('/', [ApiController::class, 'listProducts']);
+        Route::post('search-name', [ApiController::class, 'searchProductNames']);
         Route::post('search', [ApiController::class, 'searchProducts']);
         Route::post('detail', [ApiController::class, 'productDetails']);
 
@@ -65,6 +67,8 @@ Route::group(['middleware' => ['json.response']], function () {
 
         Route::post('create-order', [ApiController::class, 'createOrder']);
         Route::post('my-orders', [ApiController::class, 'listMyOrders']);
+        Route::post('order/update-pod-payment-status', [ApiController::class, 'updatePodStatus']);
+        Route::post('order/update-card-payment-status', [ApiController::class, 'updatecardStatus']);
 
         Route::post('user/profile-update', [ApiAuthController::class, 'profileUpdate']);
 
@@ -75,8 +79,15 @@ Route::group(['middleware' => ['json.response']], function () {
             Route::post('add-item', [ApiController::class, 'addItem']);
             Route::post('remove-item', [ApiController::class, 'removeItem']);
             Route::get('clear', [ApiController::class, 'clearCart']);
+            Route::post('checkout', [ApiController::class, 'cartCheckout']);
 
             // Route::get('/{productId}', [ApiController::class, 'productDetails']);
+
+        });
+
+        Route::prefix('payment')->group(function () {
+            Route::post('create-ekey', [PaymentController::class, 'createEKey']);
+            Route::post('stripe-intend', [PaymentController::class, 'createStripePaymentIntend']);
 
         });
     });
