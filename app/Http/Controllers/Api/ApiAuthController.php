@@ -5,18 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\Domains\Auth\Models\User;
 use App\Domains\Auth\Services\UserService;
 use App\Http\Controllers\Controller;
+use App\Mail\RegisterationMail;
 use App\Models\PasswordForgotRequest;
+use App\Models\ReferralUsers;
+use App\Models\CommonDatas;
+use App\Models\Coupon;
+use App\Services\PaymentServices;
 use GuzzleHttp\Client;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Passport\Client as OClient;
-use Storage;
 use Mail;
-use Illuminate\Support\Str;
-use App\Services\PaymentServices;
+use Storage;
 
 class ApiAuthController extends Controller
 {
@@ -36,7 +40,6 @@ class ApiAuthController extends Controller
 
     public function register(Request $request)
     {
-        // echo Str::random(40);
         $rules = [
             'first_name' => 'bail|required|max:50',
             'last_name' => 'bail|required|max:50',
@@ -44,11 +47,20 @@ class ApiAuthController extends Controller
             'password' => 'bail|required|min:6|regex:/[a-z]/|regex:/[A-Z]/|regex:/[0-9]/|regex:/[@$!%*#?&]/|confirmed',
             'mobile' => 'bail|nullable|min:6',
         ];
+
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             $errors = $validator->errors();
             return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $referralCode = $isReferralValid = 0;
+        if ($request->has('referral_code') && !empty($request->referral_code)) {
+            $isReferralValid = User::where('referral_code', $request->referral_code)->first();
+            if ($isReferralValid) {
+                $referralCode = 1;
+            }
         }
 
         $userData = Arr::only($request->all(), array_keys($rules));
@@ -70,7 +82,35 @@ class ApiAuthController extends Controller
 
         $userData = User::find($user->id);
 
-        return returnApiResponse(true, 'Account created!', ['user' => collect($userData)->only(['id', 'first_name', 'last_name', 'email', 'mobile', 
+        //Referral details
+        if (!empty($isReferralValid) && $referralCode) {
+            $referralDiscountDetails = CommonDatas::where([['key','=','referral-discount-amount'],['status','=','1']])->first();
+            
+            $ReferralUsers = ReferralUsers::create(['child_user' => $user->id, 'parent_user' => $isReferralValid->id, 
+                'parent_user_discount' => $referralDiscountDetails->value_3, 'child_user_discount' => $referralDiscountDetails->value_2,
+                'min_spend_value' => $referralDiscountDetails->value_1]);
+            
+            //Parent coupon
+            Coupon::create(['nature' => 'referral', 'user_id' => $isReferralValid->id, 'referral_id' => $ReferralUsers->id, 'title' => 'Referral coupon', 'code' => strtoupper(generateReferralString('referralparent'.$isReferralValid->id)), 
+                'offer_value' => $referralDiscountDetails->value_3, 'coupon_type' => 'amount', 'image' => '', 'start_date' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'), 
+                'description' => 'Referral coupon - '.$user->name]);
+            
+                //Child coupon
+            Coupon::create(['nature' => 'referral', 'user_id' => $user->id, 'referral_id' => $ReferralUsers->id, 'title' => 'Referral coupon', 'code' => strtoupper(generateReferralString('referralchild'.$user->id)), 
+                'offer_value' => $referralDiscountDetails->value_3, 'coupon_type' => 'amount', 'image' => '', 'start_date' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'), 
+                'description' => 'Referral coupon - '.$user->name, 'status' => '1']);
+        }
+
+        //Create referral code
+        User::where('id', $user->id)->update(['referral_code' => generateReferralString($user->id . str_replace('.', '#', $user->email))]);
+
+        try {
+            // Mail::to($request->email)->later(now()->addSeconds(10), new RegisterationMail($userData));
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+
+        return returnApiResponse(true, 'Account created!', ['user' => collect($userData)->only(['id', 'first_name', 'last_name', 'email', 'mobile',
             'image', 'stripe_cust_id']),
             'token' => $tokens['access_token'], 'refresh_token' => $tokens['refresh_token']]);
 
@@ -109,6 +149,11 @@ class ApiAuthController extends Controller
 
         //Create stripe customer
         $this->paymentServices->createSripeCustomer($user->id);
+
+        //Create referral code
+        if (empty($user->referral_code)) {
+            User::where('id', $user->id)->update(['referral_code' => generateReferralString($user->id . str_replace('.', '#', $user->email))]);
+        }
 
         // $token = auth()->user()->createToken('API Token')->accessToken;
         return returnApiResponse(true, 'Successfully logged in.', [
@@ -154,7 +199,7 @@ class ApiAuthController extends Controller
         $createD = [
             'first_name' => trim($request->first_name),
             'last_name' => trim($request->last_name),
-            'mobile' => $request->mobile ?? null
+            'mobile' => $request->mobile ?? null,
         ];
 
         $passwordChanged = 0;
@@ -218,16 +263,16 @@ class ApiAuthController extends Controller
                     'otp' => $randomNumber,
                 ]);
 
-                $htmlContent = '<h4>Hi, '.$request->email.'!</h4><p><h2>OTP is '.$randomNumber.'</h2></p>';
+                $htmlContent = '<h4>Hi, ' . $request->email . '!</h4><p><h2>OTP is ' . $randomNumber . '</h2></p>';
 
-                Mail::send([], [], function ($message) use($emailAddress, $htmlContent){
+                Mail::send([], [], function ($message) use ($emailAddress, $htmlContent) {
                     $message->to($emailAddress)
                         ->subject('Forgot Password Link')
                         ->setBody($htmlContent, 'text/html'); // for HTML rich messages
                 });
 
                 return returnApiResponse(true, 'Your request has been processing, please check your inbox.', [
-                    'waitingTime' => env('FORGOT_PWD_OTP_TIMEOUT',180),
+                    'waitingTime' => env('FORGOT_PWD_OTP_TIMEOUT', 180),
                 ]);
 
             } else {
@@ -268,7 +313,7 @@ class ApiAuthController extends Controller
             $nos = \Carbon\Carbon::now();
             $tt = \Carbon\Carbon::parse($isExists->created_at);
 
-            if ($nos->diffInSeconds($tt) > env('FORGOT_PWD_OTP_TIMEOUT',180)) {
+            if ($nos->diffInSeconds($tt) > env('FORGOT_PWD_OTP_TIMEOUT', 180)) {
 
                 PasswordForgotRequest::where([['id', '=', $isExists->id], ['status', '=', '1']])->update(['status' => '0']);
                 return returnApiResponse(false, 'OTP is expired');

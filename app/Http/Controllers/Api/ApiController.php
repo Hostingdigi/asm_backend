@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domains\Auth\Models\User;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Cart;
@@ -20,6 +21,7 @@ use App\Rules\ValidateProduct;
 use App\Rules\validateProductIdArray;
 use App\Rules\ValidateProductVariant;
 use App\Services\CartServices;
+use App\Services\OrderServices;
 use App\Services\PaymentServices;
 use DB;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,11 +34,13 @@ class ApiController extends Controller
 
     protected $cartServices = null;
     protected $paymentServices = null;
+    protected $orderServices = null;
 
-    public function __construct(CartServices $cartServices, PaymentServices $paymentServices)
+    public function __construct(CartServices $cartServices, PaymentServices $paymentServices, OrderServices $orderServices)
     {
         $this->cartServices = $cartServices;
         $this->paymentServices = $paymentServices;
+        $this->orderServices = $orderServices;
     }
 
     public function getAppData(Request $request)
@@ -538,22 +542,22 @@ class ApiController extends Controller
 
             Order::where('id', $isOrderExists->id)->update([
                 'is_dummy_order' => 0,
-                'payment_status' => $request->payment_status
+                'payment_status' => $request->payment_status,
             ]);
 
-            Payment::where('order_id',$isOrderExists->id,)->update([
+            Payment::where('order_id', $isOrderExists->id, )->update([
                 'status' => $request->payment_status,
                 'payment_response' => serialize(!empty($request->return_response) ? $request->return_response : []),
             ]);
 
-            if($request->payment_status){
+            if ($request->payment_status) {
                 $this->cartServices->clearUserCart();
             }
 
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $isOrderExists->id,
                 'payment_status' => $request->payment_status,
-                'payment_mode' => 'card'
+                'payment_mode' => 'card',
             ]);
         }
 
@@ -622,7 +626,7 @@ class ApiController extends Controller
             $orderNo = sprintf('%05d', Order::count());
 
             //Create order
-            $orderData = [
+            $order = Order::create([
                 'order_no' => $orderNo,
                 'payment_mode' => $request->payment_mode,
                 'user_id' => auth()->id(),
@@ -635,8 +639,8 @@ class ApiController extends Controller
                 'billing_details' => serialize($billingDetails),
                 'shipping_details' => serialize($shippingDetails),
                 'ordered_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
-            ];
-            $order = Order::create($orderData);
+                'status' => 3,
+            ]);
 
             //Update payment
             $sent_response = [];
@@ -676,10 +680,23 @@ class ApiController extends Controller
             //Clear cart items
             $this->cartServices->clearUserCart();
 
+            //Create status
+            $this->orderServices->updateOrderStatusHistory([
+                [
+                    'order_id' => $order->id,
+                    'status_code' => 1,
+                    'updated_by' => auth()->id(),
+                ], [
+                    'order_id' => $order->id,
+                    'status_code' => 3,
+                    'updated_by' => 1,
+                ],
+            ]);
+
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $order->id,
                 'payment_status' => 0,
-                'payment_mode' => 'pod'
+                'payment_mode' => 'pod',
             ]);
         }
 
@@ -798,7 +815,8 @@ class ApiController extends Controller
 
     public function listPromocodes(Request $request)
     {
-        $data = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'])->activeOnly();
+        $data = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'])
+            ->where('nature','general')->activeOnly();
         $data->map(function ($row) {
             $row['image'] = $row->formatedimageurl;
             return $row;
@@ -1040,5 +1058,30 @@ class ApiController extends Controller
 
         return returnApiResponse(true, 'Payment is received successfully.');
 
+    }
+
+    public function referralDetails(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_platform' => 'sometimes',
+        ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $referralDiscountDetails = CommonDatas::where([['key', '=', 'referral-discount-amount'], ['status', '=', '1']])->first();
+
+        $referralCode = User::find(auth()->id())->referral_code;
+        $devicePlatform = empty($request->device_platform) ? 'android' : trim($request->device_platform);
+        $data = [
+            'referral_user_amount' => $referralDiscountDetails->value_2 ?? 0,
+            'user_amount' => $referralDiscountDetails->value_3 ?? 0,
+            'referral_code' => $referralCode,
+            'url' => route('frontend.referral-by', ['device_platform' => $devicePlatform, 'referral_code' => $referralCode]),
+        ];
+
+        return returnApiResponse(true, '', $data);
     }
 }

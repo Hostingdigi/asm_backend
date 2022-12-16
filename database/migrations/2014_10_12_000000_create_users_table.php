@@ -24,6 +24,7 @@ class CreateUsersTable extends Migration
             $table->timestamp('password_changed_at')->nullable();
             $table->unsignedTinyInteger('active')->default(1);
             $table->mediumText('mobile')->nullable();
+            $table->mediumText('referral_code')->nullable();
             $table->string('timezone')->nullable();
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip')->nullable();

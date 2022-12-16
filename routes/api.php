@@ -57,6 +57,8 @@ Route::group(['middleware' => ['json.response']], function () {
 
     Route::middleware(['auth:api'])->group(function () {
 
+        Route::post('referral-details', [ApiController::class, 'referralDetails']);
+
         Route::post('promocodes/update', [ApiController::class, 'applyPromocode']);
 
         Route::post('change-password', [ApiAuthController::class, 'changePassword']);

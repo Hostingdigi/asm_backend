@@ -27,6 +27,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $schedule->command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
         $schedule->command('demo:cron')
             ->everyMinute();
         // $schedule->command('activitylog:clean')->daily();

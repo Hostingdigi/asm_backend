@@ -14,6 +14,8 @@ Route::get('/', [HomeController::class, 'index'])
         $trail->push(__('Home'), route('frontend.index'));
     });
 
+Route::get('referral-by', [HomeController::class, 'referralBy'])->name('referral-by');
+
 Route::get('privacy-policy', [TermsController::class, 'privacy'])
     ->name('pages.privacy-policy')
     ->breadcrumbs(function (Trail $trail) {

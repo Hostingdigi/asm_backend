@@ -15,7 +15,7 @@ class UsersTable extends TableComponent
     /**
      * @var string
      */
-    public $sortField = 'name';
+    public $sortField = 'first_name';
 
     /**
      * @var string

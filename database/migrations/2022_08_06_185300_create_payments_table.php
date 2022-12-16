@@ -16,7 +16,7 @@ class CreatePaymentsTable extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->mediumText('order_type')->default('pod');
-            $table->unsignedBigInteger('order_id');
+            $table->foreignId('order_id')->constrained('orders');
             $table->tinyInteger('status')->default(0);
             $table->tinyInteger('row_status')->default(0);
             $table->longText('sent_response')->nullable();

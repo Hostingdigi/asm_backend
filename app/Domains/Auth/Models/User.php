@@ -62,6 +62,8 @@ class User extends Authenticatable implements MustVerifyEmail, TwoFactorAuthenti
         'provider',
         'provider_id',
         'image',
+        'referral_code',
+        'referred_by',
         'stripe_cust_id'
     ];
 

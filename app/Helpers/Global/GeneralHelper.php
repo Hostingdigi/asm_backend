@@ -1,25 +1,25 @@
 <?php
 
-use Carbon\Carbon;
 use App\Models\Countries;
+use Carbon\Carbon;
 
-if (! function_exists('returnApiResponse')) {
+if (!function_exists('returnApiResponse')) {
     /**
      * Helper to grab the application name.
      *
      * @return mixed
      */
-    function returnApiResponse($status = true,$message = '',$data = null)
+    function returnApiResponse($status = true, $message = '', $data = null)
     {
         return response()->json([
             'status' => $status,
             'message' => $message,
-            'data' => $data
+            'data' => $data,
         ]);
     }
 }
 
-if (! function_exists('appName')) {
+if (!function_exists('appName')) {
     /**
      * Helper to grab the application name.
      *
@@ -31,7 +31,7 @@ if (! function_exists('appName')) {
     }
 }
 
-if (! function_exists('carbon')) {
+if (!function_exists('carbon')) {
     /**
      * Create a new Carbon instance from a time.
      *
@@ -46,7 +46,7 @@ if (! function_exists('carbon')) {
     }
 }
 
-if (! function_exists('homeRoute')) {
+if (!function_exists('homeRoute')) {
     /**
      * Return the route to the "home" page depending on authentication/authorization status.
      *
@@ -68,7 +68,6 @@ if (! function_exists('homeRoute')) {
     }
 }
 
-
 if (!function_exists('countryName')) {
     /**
      * Return the route to the "home" page depending on authentication/authorization status.
@@ -83,4 +82,19 @@ if (!function_exists('countryName')) {
 
         return null;
     }
+}
+
+if (!function_exists('generateReferralString')) {
+
+    function generateReferralString($encryptString)
+    {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' . $encryptString;
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < 8; $i++) {
+            $randomString .= $characters[rand(0, $charactersLength - 1)];
+        }
+        return $randomString;
+    }
+
 }
