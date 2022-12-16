@@ -7,6 +7,7 @@ use App\Models\CartAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\OrderHistory;
 use App\Models\Product;
 use App\Services\CartServices;
 
@@ -20,6 +21,30 @@ class OrderServices
     {
         $this->cartServices = $cartServices;
         $this->cartAddress = $cartAddress;
+    }
+
+    public function updateOrderStatusHistory($data)
+    {
+        foreach ($data as $key => $value) {
+
+            $isRowExists = OrderHistory::where([
+                ['order_id', '=', $value['order_id']],
+                ['status_code', '=', $value['status_code']],
+                ['status', '=', '1'],
+            ])->first();
+
+            if($isRowExists){
+                $isRowExists->status = '0';
+                $isRowExists->save();
+            }
+
+            OrderHistory::create($value);
+        }
+    }
+
+    public function updateOrderStatus($data)
+    {
+        return Order::where('id',$data['orderId'])->update(['status' => $data['statusValue']]);
     }
 
     public function createDummyOrder($orderData)

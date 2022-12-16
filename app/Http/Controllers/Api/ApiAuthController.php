@@ -60,6 +60,8 @@ class ApiAuthController extends Controller
             $isReferralValid = User::where('referral_code', $request->referral_code)->first();
             if ($isReferralValid) {
                 $referralCode = 1;
+            }else{
+                return returnApiResponse(false, 'Invalid referral code.');
             }
         }
 
@@ -105,7 +107,7 @@ class ApiAuthController extends Controller
         User::where('id', $user->id)->update(['referral_code' => generateReferralString($user->id . str_replace('.', '#', $user->email))]);
 
         try {
-            // Mail::to($request->email)->later(now()->addSeconds(10), new RegisterationMail($userData));
+            Mail::to($request->email)->later(now()->addSeconds(10), new RegisterationMail($userData));
         } catch (\Throwable $th) {
             //throw $th;
         }

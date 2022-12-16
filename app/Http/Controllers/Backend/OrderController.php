@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderStatus;
+use App\Services\OrderServices;
 use DataTables;
 use Illuminate\Http\Request;
 
@@ -14,15 +16,23 @@ class OrderController extends Controller
         'message' => 'Something went wrong.Try again later.',
     ];
 
+    protected $orderServices = null;
+
+    public function __construct(OrderServices $orderServices)
+    {
+        $this->orderServices = $orderServices;
+    }
+
     public function listOrders(Request $request)
     {
         if ($request->ajax()) {
-            $users = Order::where([['is_dummy_order','=',0]])->latest()->get();
+            $users = Order::where([['is_dummy_order', '=', 0]])->latest()->get();
+            $orderStatus = OrderStatus::activeOnly();
 
             return Datatables::of($users)
                 ->addIndexColumn()
                 ->addColumn('order_no', function ($row) {
-                    return '<a title="View Order" href="' . route('admin.orders.orderDetail', $row->id) . '" target="new">#' . $row->order_no.'</a>';
+                    return '<a title="View Order" href="' . route('admin.orders.orderDetail', $row->id) . '" target="new">#' . $row->order_no . '</a>';
                 })
                 ->addColumn('customer', function ($row) {
                     return $row->customer->name;
@@ -39,31 +49,29 @@ class OrderController extends Controller
                         'pod' => 'Pay on Delivery',
                         'card' => 'Online',
                     ];
-                    $paymentStatus = (!empty($row->payment_mode) ? $paymodes[$row->payment_mode] : $paymodes['pod']) .' - ';
+                    $paymentStatus = (!empty($row->payment_mode) ? $paymodes[$row->payment_mode] : $paymodes['pod']) . ' - ';
 
-                    $paymentStatus .= '<a title="View Payment History" href="" '.($row->payment_status ? 'class="text-success font-weight-bold">Paid' : 'class="text-warning font-weight-bold">Pending' ). '<i class="icon icon-2xl cil-find-in-page"></i></a>';
+                    $paymentStatus .= '<a title="View Payment History" href="" ' . ($row->payment_status ? 'class="text-success font-weight-bold">Paid' : 'class="text-warning font-weight-bold">Pending') . '<i class="icon icon-2xl cil-find-in-page"></i></a>';
 
                     return $paymentStatus;
                 })
                 ->addColumn('ordered', function ($row) {
                     return \Carbon\Carbon::parse($row->created_at)->format('d/m/Y h:i A');
                 })
-                ->addColumn('status', function ($row) {
+                ->addColumn('status', function ($row) use ($orderStatus) {
 
-                    $statusContent = '<select class="order_change" data-orderid="'.$row->id.'">';
-                    $statusContent .= '<option>Order Confirmed</option>';
-                    $statusContent .= '<option>Shipped</option>';
-                    $statusContent .= '<option>Out for Delivery</option>';
-                    $statusContent .= '<option>Delivered</option>';
+                    $statusContent = '<select class="order_change" data-orderid="' . $row->id . '">';
+                    foreach ($orderStatus as $key => $value) {
+                        $statusContent .= '<option value="' . $value->status_code . '" ';
+                        if ($row->status == $value->status_code) {
+                            $statusContent .= ' selected="selected" ';
+                        }
+                        $statusContent .= '>' . $value->label . '</option>';
+                    }
                     $statusContent .= '</select>';
 
                     return $statusContent;
 
-                    // if ($row->status == '1') {
-                    //     return 'Ordered';
-                    // } else if ($row->status == 0) {
-                    //     return '<span class="text-danger">Failed</span>';
-                    // }
                 })
                 ->addColumn('actions', function ($row) {
                     $actions = '<a title="View Order" class="btn btn-outline-dark" href="' . route('admin.orders.orderDetail', $row->id) . '"><i class="fa fa-fw fa-eye"></i></a> ';
@@ -84,6 +92,15 @@ class OrderController extends Controller
 
     public function changeStatus(Request $request)
     {
-        return response()->json($request->all());
+        $this->orderServices->updateOrderStatus($request->all());
+        $this->orderServices->updateOrderStatusHistory([
+            [
+                'order_id' => $request->orderId,
+                'status_code' => $request->statusValue,
+                'updated_by' => auth()->id(),
+            ],
+        ]);
+
+        return returnApiResponse(true, 'Updated!');
     }
 }

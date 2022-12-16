@@ -71,10 +71,11 @@
 <script>
     $(document).ready( function () {
 
-        var orderId = 0;
+        var orderId = statusValue = 0;
         $("body").on("change", ".order_change", function(e)
         {
             orderId = $(this).data('orderid'); 
+            statusValue = $(this).val();
             $("#confirmModal").modal("show");
         });
 
@@ -83,13 +84,13 @@
                 $.ajax({
                     type : 'POST',
                     url : '{{ route("admin.orders.changeStatus") }}',
-                    data : {orderId : orderId,_token:'{{ csrf_token() }}'},
+                    data : {orderId : orderId, statusValue: statusValue ,_token:'{{ csrf_token() }}'},
                     success: function(result)
                     {
-                        // $("#editCategoryForm").attr('action',"{{ route('admin.masters.categories.index') }}/"+result['data']['id']);
-                        // $("input[name='cat_id']").val(result['data']['id']);
-                        // $("#parent_id").val(result['data']['parent_id']);
-                        // $("#cat_name").val(result['data']['name']);
+                        orderId = 0;
+                        statusValue = 0;
+                        $("#confirmModal").modal("hide");
+                        alert(result.message);
                     }
                 });
             }else{

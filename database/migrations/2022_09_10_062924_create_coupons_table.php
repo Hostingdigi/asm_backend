@@ -15,12 +15,13 @@ class CreateCouponsTable extends Migration
     {
         Schema::create('coupons', function (Blueprint $table) {
             $table->id();
+            $table->enum('nature', ['general', 'referral', 'user'])->default('general');
             $table->enum('coupon_type', ['percentage', 'amount'])->default('percentage');
             $table->mediumText('vendor_customization')->nullable();
             $table->mediumText('title');
             $table->mediumText('code');
             $table->mediumText('image')->nullable();
-            $table->decimal('offer_value',8,2);
+            $table->decimal('offer_value', 8, 2);
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->mediumText('description')->nullable();

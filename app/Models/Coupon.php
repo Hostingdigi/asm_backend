@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Coupon extends Model
 {
-    protected $fillable = ['coupon_type','vendor_customization','title','code','image','offer_value','start_date','end_date',
+    protected $fillable = ['nature','referral_id','user_id','coupon_type','vendor_customization','title','code','image','offer_value','start_date','end_date',
         'description','status'];
 
     public function scopeActiveOnly($query)
