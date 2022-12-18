@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\CartAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderStatus;
 use App\Models\Payment;
 use App\Models\OrderHistory;
 use App\Models\Product;
@@ -183,6 +184,60 @@ class OrderServices
             'status' => false,
             'message' => 'Cart items are not available',
         ];
+    }
+
+    public function trackingDetails($order)
+    {
+        $dd = OrderStatus::select(['id', 'label', 'status_code'])->where('status', '1')
+            ->whereIn('status_code', [3, 4, 5, 6])
+            ->orderBy('sort_by', 'asc')->get();
+
+        $buildOrderHis = [];
+        $normalFormat = $dd;
+        $orderSH = OrderHistory::where([['order_id', '=', $order->id], ['status', '=', '1']])->whereNotIn('status_code', [1])->oldest()->get()->toArray();
+
+        foreach ($normalFormat as $nk => $nF) {
+
+            $bd = [
+                'label' => $nF['label'],
+                'active_status' => 0,
+                'updated_at' => null,
+            ];
+            $stCode = $nF['status_code'];
+            $new = array_values(array_filter($orderSH, function ($var) use ($stCode) {
+                return ($var['status_code'] == $stCode);
+            }));
+
+            if (!empty($new)) {
+                $bd['active_status'] = 1;
+                $bd['updated_at'] = \Carbon\Carbon::parse($new[0]['created_at'])->format('h:i A, d M Y');
+            }
+
+            array_push($buildOrderHis,$bd);
+
+            $normalFormat[$nk]['activeStatus'] = 0;
+        }
+
+        $orderS = $order->status;
+        $buildOrderHisT = null;
+        if($orderS==2){
+            $buildOrderHisT = array_values(array_filter($buildOrderHis, function ($var){
+                return ($var['active_status']==1);
+            }));
+
+            $findCancelDetails = array_values(array_filter($orderSH, function ($var){
+                return ($var['status_code']==2);
+            }));
+
+            array_push($buildOrderHisT,[
+                'label' => 'Cancelled',
+                'active_status' => 1,
+                'updated_at' => \Carbon\Carbon::parse($findCancelDetails[0]['created_at'])->format('h:i A, d M Y')
+            ]);
+        }
+
+        return $buildOrderHisT ?? $buildOrderHis;
+
     }
 
 }

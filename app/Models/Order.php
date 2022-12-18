@@ -22,7 +22,8 @@ class Order extends Model
         'billing_details',
         'shipping_details',
         'ordered_at',
-        'payment_status'
+        'payment_status',
+        'status'
     ];
 
     public function customer()

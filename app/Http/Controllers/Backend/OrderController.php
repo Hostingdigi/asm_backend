@@ -60,15 +60,25 @@ class OrderController extends Controller
                 })
                 ->addColumn('status', function ($row) use ($orderStatus) {
 
-                    $statusContent = '<select class="order_change" data-orderid="' . $row->id . '">';
-                    foreach ($orderStatus as $key => $value) {
-                        $statusContent .= '<option value="' . $value->status_code . '" ';
-                        if ($row->status == $value->status_code) {
-                            $statusContent .= ' selected="selected" ';
+                    if ($row->status == 2) {
+                        $statusContent = '<p class="text-danger mb-0">Cancelled</p>';
+                    } else {
+                        $statusContent = '<select class="order_change" data-orderid="' . $row->id . '">';
+
+                        foreach ($orderStatus as $key => $value) {
+                            if ($row->status == 2 && $value->status_code != 2) {
+                                continue;
+                            }
+                            $statusContent .= '<option value="' . $value->status_code . '" ';
+                            if ($row->status == $value->status_code) {
+                                $statusContent .= ' selected="selected" ';
+                            }
+                            $statusContent .= '>' . $value->label . '</option>';
+
                         }
-                        $statusContent .= '>' . $value->label . '</option>';
+                        $statusContent .= '</select>';
+
                     }
-                    $statusContent .= '</select>';
 
                     return $statusContent;
 

@@ -13,13 +13,16 @@ use App\Models\CommonDatas;
 use App\Models\Countries;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\OrderHistory;
 use App\Models\OrderItem;
+use App\Models\OrderStatus;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductWishlist;
 use App\Rules\ValidateProduct;
 use App\Rules\validateProductIdArray;
 use App\Rules\ValidateProductVariant;
+use App\Services\AppMailService;
 use App\Services\CartServices;
 use App\Services\OrderServices;
 use App\Services\PaymentServices;
@@ -35,12 +38,14 @@ class ApiController extends Controller
     protected $cartServices = null;
     protected $paymentServices = null;
     protected $orderServices = null;
+    protected $appMailService = null;
 
-    public function __construct(CartServices $cartServices, PaymentServices $paymentServices, OrderServices $orderServices)
+    public function __construct(CartServices $cartServices, PaymentServices $paymentServices, OrderServices $orderServices, AppMailService $appMailService)
     {
         $this->cartServices = $cartServices;
         $this->paymentServices = $paymentServices;
         $this->orderServices = $orderServices;
+        $this->appMailService = $appMailService;
     }
 
     public function getAppData(Request $request)
@@ -468,6 +473,7 @@ class ApiController extends Controller
         $orders = Order::select(['id', 'order_no', 'total_amount', 'tax_amount', 'shipping_amount', 'coupon_code', 'coupon_amount',
             'billing_details', 'shipping_details', 'ordered_at', 'status'])
             ->where('user_id', auth()->id())
+            // ->whereIn('id',[50,52])
         // ->with('payment')
             ->latest()
             ->get()->makeHidden(['created_at', 'updated_at']);
@@ -478,7 +484,7 @@ class ApiController extends Controller
             foreach ($order->items as $item) {
 
                 $orderItem = $order;
-                $orderItem->tracking_details = null;
+                $orderItem->tracking_details = $this->orderServices->trackingDetails($order);
 
                 $orderItem['item'] = $item;
 
@@ -502,7 +508,7 @@ class ApiController extends Controller
                 }
 
                 if (!empty($productDetails)) {
-                    $productDetails['image'] = $productDetails['image'];
+                    $productDetails['image'] = asset('storage/' . $productDetails['image']);
                 }
 
                 $orderItem['item']['product_details'] = $productDetails;
@@ -542,6 +548,7 @@ class ApiController extends Controller
 
             Order::where('id', $isOrderExists->id)->update([
                 'is_dummy_order' => 0,
+                'status' => $request->payment_status ? 3 : 9,
                 'payment_status' => $request->payment_status,
             ]);
 
@@ -553,6 +560,9 @@ class ApiController extends Controller
             if ($request->payment_status) {
                 $this->cartServices->clearUserCart();
             }
+
+            // send mail;
+            $this->appMailService->sendMail('orderMail', ['toAddress' => 'bahadurajm@gmail.com'], Order::find($isOrderExists->id));
 
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $isOrderExists->id,
@@ -693,6 +703,9 @@ class ApiController extends Controller
                 ],
             ]);
 
+            // send mail;
+            $this->appMailService->sendMail('orderMail', ['toAddress' => 'bahadurajm@gmail.com'], Order::find($order->id));
+
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $order->id,
                 'payment_status' => 0,
@@ -816,7 +829,7 @@ class ApiController extends Controller
     public function listPromocodes(Request $request)
     {
         $data = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'])
-            ->where('nature','general')->activeOnly();
+            ->where('nature', 'general')->activeOnly();
         $data->map(function ($row) {
             $row['image'] = $row->formatedimageurl;
             return $row;
@@ -1072,6 +1085,8 @@ class ApiController extends Controller
         }
 
         $referralDiscountDetails = CommonDatas::where([['key', '=', 'referral-discount-amount'], ['status', '=', '1']])->first();
+        $appImages = CommonDatas::where([['key', '=', 'app_images'], ['status', '=', '1']])->first();
+        $appShareImage = $appImages && !empty($appImages->value_1) ? url($appImages->value_1) : url('images/noimage.png');
 
         $referralCode = User::find(auth()->id())->referral_code;
         $devicePlatform = empty($request->device_platform) ? 'android' : trim($request->device_platform);
@@ -1079,6 +1094,7 @@ class ApiController extends Controller
             'referral_user_amount' => $referralDiscountDetails->value_2 ?? 0,
             'user_amount' => $referralDiscountDetails->value_3 ?? 0,
             'referral_code' => $referralCode,
+            'app_image' => $appShareImage,
             'url' => route('frontend.referral-by', ['device_platform' => $devicePlatform, 'referral_code' => $referralCode]),
         ];
 

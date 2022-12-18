@@ -25,7 +25,7 @@ class OrderStatusSeeder extends Seeder
                 'label' => 'Order Cancelled',
                 'description' => '',
                 'status' => '0',
-                'sort_by' => 0
+                'sort_by' => 1
             ],
             [
                 'status_code' => 3,
@@ -65,6 +65,13 @@ class OrderStatusSeeder extends Seeder
             [
                 'status_code' => 8,
                 'label' => 'Refund Completed',
+                'description' => '',
+                'status' => '0',
+                'sort_by' => 0
+            ],
+            [
+                'status_code' => 9,
+                'label' => 'Failed',
                 'description' => '',
                 'status' => '0',
                 'sort_by' => 0

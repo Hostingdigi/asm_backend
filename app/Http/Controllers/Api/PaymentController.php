@@ -23,7 +23,6 @@ class PaymentController extends Controller
     {
         $this->cartServices = $cartServices;
         $this->orderServices = $orderServices;
-        $this->orderServices = $orderServices;
         $this->paymentServices = $paymentServices;
     }
 

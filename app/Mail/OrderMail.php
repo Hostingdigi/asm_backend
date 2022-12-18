@@ -8,7 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Order;
 
-class OrderMail extends Mailable
+class OrderMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
     public $order;
@@ -29,6 +29,6 @@ class OrderMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Order has been placed - #123')->view('emails.order');
+        return $this->subject('Order has been placed - #'.$this->order->order_no)->view('emails.order');
     }
 }

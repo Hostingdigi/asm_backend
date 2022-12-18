@@ -6,25 +6,40 @@
     <x-backend.card>
         <x-slot name="header">
             Order Detail : {{'#'.$order->order_no}}
+            <a href="{{ url('admin/orders') }}" class="btn btn-light float-right btn-sm"> <i class="fa fa-arrow-left"></i> BACK</a>
         </x-slot>
 
         <x-slot name="body">
 
             <div class="row">
-                <div class="col">
-                    <h4>Order Details:</h4>
-                    <p class="mb-1"><strong>{{'#'.$order->order_no}}</strong></p>
-                    <p class="mb-0">Email:</p>
-                    <p>Mobile:</p>
-                </div>
-                <div class="col">
-                    <h4>Cutomer Details:</h4>
-                    <p class="mb-1"><strong>Lal</strong></p>
-                    <p class="mb-0">Email:</p>
-                    <p>Mobile:</p>
-                </div>
-                <div class="col">
-                    @php
+
+                <div class="col-12">
+                    <table class="table table-bordered table-hover">
+                        <thead class="bg-dark">
+                            <tr>
+                                <th class="text-white">Order Details</th>
+                                <th class="text-white">Customer Details</th>
+                                <th class="text-white">Shipping Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <p class="mb-1"><strong>{{'#'.$order->order_no}}</strong></p>
+                                    <p class="mb-1">Order Status: <b>{{ $order->order_status->label ?? '-' }}</b></p>
+                                    <p class="mb-1">Payment Mode: <b>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay On Delivery' }}</b></p>
+                                    <p class="mb-1">Payment Status: <b>{{  $order->payment_mode == 'pod' ? ($order->payment_status == 1 ? 'Paid' : 'Pending') : 
+                                        ($order->payment_status == 1 ? 'Paid' : 'Failed') }}</b></p>
+                                    <p class="mb-1">Transaction number: </p>
+                                    <a href=""> <i class="fa fa-mouse"></i> View Payment History</a>
+                                </td>
+                                <td>
+                                    <p class="mb-1"><strong>{{ $order->customer->name }}</strong></p>
+                                    <p class="mb-0">Email: {{ $order->customer->email }}</p>
+                                    <p>Mobile: {{ $order->customer->mobile_no ?? '-' }}</p>
+                                </td>
+                                <td>
+                                    @php
                         $shippingDetails = [];
                             try{
                                 $shippingDetails = unserialize($order->shipping_details);
@@ -44,27 +59,31 @@
                     @else
                     <p>Address is not available.</p>
                     @endif
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <hr>
 
             <div class="row">
-                <div class="col">
+                <div class="col-12">
                     <h4>Ordered Items:</h4>
                 </div>
             </div>
 
 
             <table id="orderTable" class="table table-bordered table-hover">
-                <thead class="table-dark">
+                <thead class="bg-dark text-center">
                     <tr>
-                    <th>#</th>
-                    <th>IMAGE</th>
-                    <th>ITEM</th>
-                    <th>QUANTITY</th>
-                    <th>AMOUNT</th>
-                    <th>TOTAL AMOUNT</th>
+                    <th class="text-white" width="5%">#</th>
+                    <th class="text-white" width="10%">IMAGE</th>
+                    <th class="text-white">PRODUCT NAME</th>
+                    <th class="text-white" width="5%">QUANTITY</th>
+                    <th class="text-white" width="20%">AMOUNT</th>
+                    <th class="text-white" width="20%">TOTAL AMOUNT</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -77,18 +96,38 @@
                                     $productDetails = [];
                                 }
                         @endphp
-                    <tr>
+                    <tr class="">
                         <td>{{ $ik+1 }}</td>
                         <td>
-                            <img src="{{ (!empty($productDetails['image']) ? env('IMG_URL').$productDetails['image'] : url('images/noimage.png')) }}" width="75" height="75"></td>
-                        <td><strong>{{ $productDetails['name'] }}</strong>
-                            <p>[<strong>{{ $productDetails['variant_name'].$productDetails['unit_name'] }}</strong>]</p>
+                            <img src="{{ (!empty($productDetails['image']) ? asset('storage/'.$productDetails['image']) : url('images/noimage.png')) }}" width="75" height="75"></td>
+                        <td>{{ $productDetails['name'] }}
+                            <p>[{{ $productDetails['variant_name'].$productDetails['unit_name'] }}]</p>
                         </td>
-                        <td><strong>{{ $item->quantity }}</strong></td>
-                        <td><strong>${{ $item->price }}</strong></td>
-                        <td><strong>${{ $item->total_price }}</strong></td>
+                        <td align="center">{{ $item->quantity }}</td>
+                        <td align="right"><strong>SGD {{ $item->price }}</strong></td>
+                        <td align="right"><strong>SGD {{ $item->total_price }}</strong></td>
                     </tr>
                     @endforeach
+                    <tr align="right" class="h5">
+                        <td colspan="5">Sub Total</td>
+                        <td>SGD {{number_format($order->amount,2)}}</td>
+                    </tr>
+                    <tr align="right" class="h5">
+                        <td colspan="5">Shipping</td>
+                        <td>SGD {{number_format($order->shipping_amount,2)}}</td>
+                    </tr>
+                    <tr align="right" class="h5">
+                        <td colspan="5">Tax</td>
+                        <td>SGD {{number_format($order->tax_amount,2)}}</td>
+                    </tr>
+                    <tr align="right" class="h5">
+                        <td colspan="5">Discount (-) </td>
+                        <td>SGD {{number_format($order->coupon_amount,2)}}</td>
+                    </tr>
+                    <tr align="right" class="h4">
+                        <td colspan="5" >Grand Total</td>
+                        <td>SGD {{number_format($order->total_amount,2)}}</td>
+                    </tr>
                 </tbody>
                 </table>
         </x-slot>
@@ -99,7 +138,6 @@
 <script>
     $(document).ready( function () {
 
-        $('#orderTable').DataTable();
 
     });
 </script>
