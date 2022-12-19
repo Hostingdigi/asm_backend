@@ -46,6 +46,34 @@ class ApiController extends Controller
         $this->appMailService = $appMailService;
     }
 
+    public function pCheck(Request $request)
+    {
+        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
+        if (!$stripeConfig) {
+            return returnApiResponse(false, 'Stripe configuation is not available');
+        }
+
+        $stripe = new \Stripe\StripeClient($stripeConfig->skey);
+
+        // $dd2 = $stripe->charges->all(['limit' => 3]);
+
+        // $dd = $stripe->charges->retrieve(
+        //     'ch_3MGbD0GT0QKyhrA73nGCvWDM',
+        //     []
+        // );
+
+        $dd = $stripe->paymentIntents->retrieve(
+            'pi_3MGdXqGT0QKyhrA73ZXDCVGK',
+            []
+        );
+
+        // $dd = $stripe->charges->search([
+        // 'query' => 'payment_intent:\'pi_3MGbD0GT0QKyhrA73ufMlIHo\'',
+        // ]);
+
+        return $dd;
+    }
+
     public function getAppData(Request $request)
     {
         $headQLatLang = CommonDatas::select(['id', 'value_1 as lat', 'value_2 as lang'])->where([['key', '=', 'head-quarters-lat-lang'], ['status', '=', '1']])->first();
@@ -166,7 +194,7 @@ class ApiController extends Controller
         }
 
         $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
-            ->orderBy('sale_count', 'desc')->get();
+            ->orderBy('sale_count', 'desc')->inRandomOrder()->limit(20)->get();
 
         $productIds = !empty($frequentItems) ? $frequentItems->pluck(['product_id']) : [];
 
@@ -176,6 +204,8 @@ class ApiController extends Controller
 
         if (count($productIds) > 0) {
             $products = $products->whereIn('id', $productIds);
+        } else {
+            $products = $products->inRandomOrder()->limit(20);
         }
 
         $products = $products->activeOnly();
@@ -214,6 +244,8 @@ class ApiController extends Controller
             }
         }
 
+        $productsByVariants = count($productsByVariants) > 20 ? collect($productsByVariants)->random(20) : $productsByVariants;
+
         return returnApiResponse(true, '', $productsByVariants);
 
     }
@@ -246,7 +278,7 @@ class ApiController extends Controller
 
             $paginateData = Product::select('id')
                 ->where('category_id', $request->category_id)
-                ->offset(!empty($limitCount) ? ($limitCount + $paginateCount) : 0)
+                ->offset(($limitCount + $paginateCount))
                 ->limit($paginateCount)
                 ->activeOnly()->count();
 
@@ -287,7 +319,7 @@ class ApiController extends Controller
         }
 
         return returnApiResponse(true, '', [
-            'is_pagination_available' => $paginateData ? true : false,
+            'is_last_page' => $paginateData ? false : true,
             'category' => $category,
             'products' => $data,
         ]);
@@ -576,6 +608,19 @@ class ApiController extends Controller
                 $this->cartServices->clearUserCart();
             }
 
+            //Create status
+            $this->orderServices->updateOrderStatusHistory([
+                [
+                    'order_id' => $isOrderExists->id,
+                    'status_code' => 1,
+                    'updated_by' => auth()->id(),
+                ], [
+                    'order_id' => $isOrderExists->id,
+                    'status_code' => 3,
+                    'updated_by' => 1,
+                ],
+            ]);
+
             // send mail;
             $this->appMailService->sendMail('orderMail', ['toAddress' => auth()->user()->email], Order::find($isOrderExists->id));
 
@@ -585,6 +630,8 @@ class ApiController extends Controller
                 'payment_mode' => 'card',
             ]);
         }
+
+        $cartData = $this->cartServices->listItems();
 
         // if ($request->payment_mode == 'card') {
 
@@ -649,6 +696,12 @@ class ApiController extends Controller
         if ($totalAmount > 0) {
 
             $orderNo = sprintf('%05d', Order::count());
+
+            $couponAmount = $cartData['unformatted_discount_amount'];
+            $shippingAmount = $cartData['unformatted_delivery_amount'];
+            if (!empty($cartData['coupon_details'])) {
+                $couponCode = $cartData['coupon_details']->toArray();
+            }
 
             //Create order
             $order = Order::create([
@@ -864,7 +917,9 @@ class ApiController extends Controller
             return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
-        $limitCount = !in_array($request->page, [0, 1]) ? 20 * $request->page : 0;
+        $paginateCount = 2;
+        $page = $request->has('page') ? $request->page : 1;
+        $limitCount = !in_array($page, [0, 1]) ? $paginateCount * ($request->page - 1) : 0;
 
         $frequentItemsTotal = OrderItem::groupBy('product_id')->get()->count();
 
@@ -875,7 +930,7 @@ class ApiController extends Controller
         $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
             ->orderBy('sale_count', 'desc')
             ->offset($limitCount)
-            ->limit(20)
+            ->limit($paginateCount)
             ->get();
 
         $productIds = !empty($frequentItems) ? $frequentItems->pluck(['product_id']) : [];
@@ -884,11 +939,11 @@ class ApiController extends Controller
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1')->orderBy('price');
         }]);
 
-        if (count($productIds) > 0) {
-            $products = $products->whereIn('id', $productIds);
-        } else {
-            $products = $products->offset($limitCount)->limit(20);
-        }
+        // if (count($productIds) > 0) {
+        $products = $products->whereIn('id', $productIds);
+        // } else {
+        //     $products = $products->offset($limitCount)->limit(20);
+        // }
 
         $products = $products->activeOnly();
 
@@ -897,8 +952,14 @@ class ApiController extends Controller
             return $row;
         });
 
+        $paginateData = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
+            ->orderBy('sale_count', 'desc')
+            ->offset(($limitCount + $paginateCount))
+            ->limit($paginateCount)
+            ->get()->count();
+
         return returnApiResponse(true, '', [
-            'is_last_page' => true,
+            'is_last_page' => $paginateData ? false : true,
             'items' => $products,
         ]);
     }

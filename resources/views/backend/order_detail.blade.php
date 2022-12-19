@@ -11,6 +11,21 @@
 
         <x-slot name="body">
 
+        @php
+            $paymentDetails = $couponDetails = [];
+            try {
+                $paymentDetails = unserialize($order->payment->payment_response);
+            } catch (Exception $e) {
+                $paymentDetails = [];
+            }
+
+            try {
+                $couponDetails = unserialize($order->coupon_code);
+            } catch (Exception $e) {
+                $couponDetails = [];
+            }
+        @endphp
+
             <div class="row">
 
                 <div class="col-12">
@@ -30,7 +45,7 @@
                                     <p class="mb-1">Payment Mode: <b>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay On Delivery' }}</b></p>
                                     <p class="mb-1">Payment Status: <b>{{  $order->payment_mode == 'pod' ? ($order->payment_status == 1 ? 'Paid' : 'Pending') : 
                                         ($order->payment_status == 1 ? 'Paid' : 'Failed') }}</b></p>
-                                    <p class="mb-1">Transaction number: </p>
+                                    <p class="mb-1">Transaction number: {{ $paymentDetails['transaction_id'] ?? '-' }}</p>
                                     <a href=""> <i class="fa fa-mouse"></i> View Payment History</a>
                                 </td>
                                 <td>
@@ -121,7 +136,19 @@
                         <td>SGD {{number_format($order->tax_amount,2)}}</td>
                     </tr> -->
                     <tr align="right" class="h5">
-                        <td colspan="5">Discount (-) </td>
+                        <td colspan="4">
+                        @if(!empty($couponDetails))    
+                            {{ $couponDetails['title'].' - '.$couponDetails['code'].' - ' }} 
+                            @if($couponDetails['coupon_type']=='amount')
+                                    SGD
+                            @endif
+                            {{ $couponDetails['offer_value'] }}
+                            @if($couponDetails['coupon_type']!='amount')
+                                %
+                            @endif
+                        @endif
+                        </td>
+                        <td>Discount (-) </td>
                         <td>SGD {{number_format($order->coupon_amount,2)}}</td>
                     </tr>
                     <tr align="right" class="h4">

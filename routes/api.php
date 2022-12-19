@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\PaymentController;
 
 Route::get('app-data', [ApiController::class, 'getAppData']);
+Route::get('p-check', [ApiController::class, 'pCheck']);
 
 Route::group(['middleware' => ['json.response']], function () {
 

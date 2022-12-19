@@ -105,6 +105,7 @@ Route::prefix('settings')->group(function () {
 
     Route::get('shipping-distance-amount', 'Backend\ShippingDistanceAmountController@index')->name('settings.shipping-distance-amount.index');
     Route::post('shipping-distance-amount-store', 'Backend\ShippingDistanceAmountController@store')->name('settings.shipping-distance-amount.store');
+    Route::get('shipping-distance-amount/update/status/{userId}/{statusCode}', 'Backend\ShippingDistanceAmountController@updateStatus')->name('shipping-distance-amount.updateStatus');
 
 });
 

@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\ShippingDistAmounts;
 use DataTables;
-use App\Models\WeekDaysModel;
-use App\Models\DeliveryDaysModel;
+use Illuminate\Http\Request;
 
 class ShippingDistanceAmountController extends Controller
 {
@@ -22,17 +21,18 @@ class ShippingDistanceAmountController extends Controller
      */
     public function index(Request $request)
     {
-        $weedays = WeekDaysModel::orderBy('id')->get();
-        $days = DeliveryDaysModel::orderBy('day_date','asc')->get();
-
         if ($request->ajax()) {
-            $users = Brand::select(['id', 'name', 'status'])
-                ->bothInActive();
 
-            return Datatables::of($users)
+            return Datatables::of(ShippingDistAmounts::bothInActive())
                 ->addIndexColumn()
-                ->addColumn('name', function ($row) {
-                    return ucwords($row->name);
+                ->addColumn('from_km', function ($row) {
+                    return $row->from_distance . ' KM';
+                })
+                ->addColumn('to_km', function ($row) {
+                    return $row->to_distance . ' KM';
+                })
+                ->addColumn('amount', function ($row) {
+                    return 'SGD ' . number_format($row->amount, 2);
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
@@ -40,24 +40,24 @@ class ShippingDistanceAmountController extends Controller
                     } else if ($row->status == 0) {
                         return '<b>IN-ACTIVE</b>';
                     }
-                    
+
                 })
                 ->addColumn('actions', function ($row) {
                     if ($row->status == '1') {
-                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.shipping-distance-amount.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
                     } else if ($row->status == 0) {
-                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.shipping-distance-amount.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
                     }
 
                     $actions .= '<a title="Update" data-href="' . route('admin.masters.brands.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
-                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.masters.brands.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
+                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.shipping-distance-amount.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
 
                     return $actions;
                 })
-                ->rawColumns(['actions','status'])
+                ->rawColumns(['actions', 'status'])
                 ->make(true);
         }
-        return view('backend.shipping_dist_price', compact('weedays', 'days'));
+        return view('backend.shipping_dist_price');
     }
 
     /**
@@ -78,7 +78,20 @@ class ShippingDistanceAmountController extends Controller
      */
     public function store(Request $request)
     {
-        print_r($request->all());
+        ShippingDistAmounts::create([
+            'from_distance' => $request->from_dist,
+            'to_distance' => $request->to_dist,
+            'amount' => $request->ds_amount,
+        ]);
+
+        $this->flashData = [
+            'status' => 1,
+            'message' => 'Successfully data has been created.',
+        ];
+
+        $request->session()->flash('flashData', $this->flashData);
+
+        return redirect()->route('admin.settings.shipping-distance-amount.index');
     }
 
     /**
@@ -124,5 +137,26 @@ class ShippingDistanceAmountController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    public function updateStatus(Request $request, $userId, $statusCode)
+    {
+        $result = ShippingDistAmounts::where('id', trim($userId))
+            ->update([
+                'status' => trim($statusCode),
+            ]);
+
+        if ($result) {
+            $this->flashData = [
+                'status' => 1,
+                'message' => $statusCode == 2 ? 'Successfully data has been removed' : 'Successfully status has been changed',
+            ];
+
+            $request->session()->flash('flashData', $this->flashData);
+        }
+
+        return response()->json([
+            'status' => 1,
+        ]);
     }
 }

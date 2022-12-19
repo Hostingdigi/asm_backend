@@ -5,10 +5,10 @@ namespace App\Services;
 use App\Models\Cart;
 use App\Models\CartAddress;
 use App\Models\Order;
+use App\Models\OrderHistory;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
 use App\Models\Payment;
-use App\Models\OrderHistory;
 use App\Models\Product;
 use App\Services\CartServices;
 
@@ -34,7 +34,7 @@ class OrderServices
                 ['status', '=', '1'],
             ])->first();
 
-            if($isRowExists){
+            if ($isRowExists) {
                 $isRowExists->status = '0';
                 $isRowExists->save();
             }
@@ -45,7 +45,7 @@ class OrderServices
 
     public function updateOrderStatus($data)
     {
-        return Order::where('id',$data['orderId'])->update(['status' => $data['statusValue']]);
+        return Order::where('id', $data['orderId'])->update(['status' => $data['statusValue']]);
     }
 
     public function createDummyOrder($orderData)
@@ -96,6 +96,14 @@ class OrderServices
         }
 
         $totalAmount = $cartAmount;
+
+        $cartData = $this->cartServices->listItems();
+
+        $couponAmount = $cartData['unformatted_discount_amount'];
+        $shippingAmount = $cartData['unformatted_delivery_amount'];
+        if (!empty($cartData['coupon_details'])) {
+            $couponCode = $cartData['coupon_details']->toArray();
+        }
 
         //Check already have any dummy order
         $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();
@@ -210,29 +218,29 @@ class OrderServices
 
             if (!empty($new)) {
                 $bd['active_status'] = 1;
-                $bd['updated_at'] = formatDate($new[0]['created_at'],'h:i A, d M Y');
+                $bd['updated_at'] = formatDate($new[0]['created_at'], 'h:i A, d M Y');
             }
 
-            array_push($buildOrderHis,$bd);
+            array_push($buildOrderHis, $bd);
 
             $normalFormat[$nk]['activeStatus'] = 0;
         }
 
         $orderS = $order->status;
         $buildOrderHisT = null;
-        if($orderS==2){
-            $buildOrderHisT = array_values(array_filter($buildOrderHis, function ($var){
-                return ($var['active_status']==1);
+        if ($orderS == 2) {
+            $buildOrderHisT = array_values(array_filter($buildOrderHis, function ($var) {
+                return ($var['active_status'] == 1);
             }));
 
-            $findCancelDetails = array_values(array_filter($orderSH, function ($var){
-                return ($var['status_code']==2);
+            $findCancelDetails = array_values(array_filter($orderSH, function ($var) {
+                return ($var['status_code'] == 2);
             }));
 
-            array_push($buildOrderHisT,[
+            array_push($buildOrderHisT, [
                 'label' => 'Cancelled',
                 'active_status' => 1,
-                'updated_at' => \Carbon\Carbon::parse($findCancelDetails[0]['created_at'])->format('h:i A, d M Y')
+                'updated_at' => \Carbon\Carbon::parse($findCancelDetails[0]['created_at'])->format('h:i A, d M Y'),
             ]);
         }
 

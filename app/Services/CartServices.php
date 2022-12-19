@@ -49,6 +49,8 @@ class CartServices
             'discount_amount' => number_format($discountAmount['discountAmount'], 2),
             'total_amount' => number_format($totalAmount, 2),
             'unformatted_total_amount' => $totalAmount,
+            'unformatted_discount_amount' => (float) $discountAmount['discountAmount'],
+            'unformatted_delivery_amount' => (float) $deliveryAmount,
             'coupon_details' => $discountAmount['couponDetails'],
             'cart_items' => $cartItems,
         ];
