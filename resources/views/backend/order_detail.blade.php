@@ -116,10 +116,10 @@
                         <td colspan="5">Shipping</td>
                         <td>SGD {{number_format($order->shipping_amount,2)}}</td>
                     </tr>
-                    <tr align="right" class="h5">
+                    <!-- <tr align="right" class="h5">
                         <td colspan="5">Tax</td>
                         <td>SGD {{number_format($order->tax_amount,2)}}</td>
-                    </tr>
+                    </tr> -->
                     <tr align="right" class="h5">
                         <td colspan="5">Discount (-) </td>
                         <td>SGD {{number_format($order->coupon_amount,2)}}</td>

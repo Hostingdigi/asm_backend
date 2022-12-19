@@ -13,9 +13,7 @@ use App\Models\CommonDatas;
 use App\Models\Countries;
 use App\Models\Coupon;
 use App\Models\Order;
-use App\Models\OrderHistory;
 use App\Models\OrderItem;
-use App\Models\OrderStatus;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductWishlist;
@@ -232,6 +230,10 @@ class ApiController extends Controller
             return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
+        $paginateCount = 20;
+        $page = $request->has('page') ? $request->page : 1;
+        $limitCount = !in_array($page, [0, 1]) ? $paginateCount * ($request->page - 1) : 0;
+
         $category = Category::select(['id', 'name', 'long_name', 'image', 'banner_image'])->find($request->category_id);
         $data = [];
         $userId = $request->user_id;
@@ -242,6 +244,12 @@ class ApiController extends Controller
             $category->image = $category->formatedimageurl;
             $category->banner_image = $category->formatedbannerimageurl;
 
+            $paginateData = Product::select('id')
+                ->where('category_id', $request->category_id)
+                ->offset(!empty($limitCount) ? ($limitCount + $paginateCount) : 0)
+                ->limit($paginateCount)
+                ->activeOnly()->count();
+
             $data = Product::select('id', 'code', 'name', 'cover_image',
                 'description')->with(['variants' => function ($query) {
                 $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1');
@@ -249,6 +257,8 @@ class ApiController extends Controller
                 $query->select(['id', 'product_id', 'file_name'])->orderBy('display_order', 'asc');
             }])
                 ->where('category_id', $request->category_id)
+                ->offset($limitCount)
+                ->limit($paginateCount)
                 ->activeOnly();
 
             $data = $data->map(function ($row) use ($userId) {
@@ -277,6 +287,7 @@ class ApiController extends Controller
         }
 
         return returnApiResponse(true, '', [
+            'is_pagination_available' => $paginateData ? true : false,
             'category' => $category,
             'products' => $data,
         ]);
@@ -470,10 +481,10 @@ class ApiController extends Controller
 
     public function listMyOrders(Request $request)
     {
+
         $orders = Order::select(['id', 'order_no', 'total_amount', 'tax_amount', 'shipping_amount', 'coupon_code', 'coupon_amount',
             'billing_details', 'shipping_details', 'ordered_at', 'status'])
             ->where('user_id', auth()->id())
-            // ->whereIn('id',[50,52])
         // ->with('payment')
             ->latest()
             ->get()->makeHidden(['created_at', 'updated_at']);
@@ -481,23 +492,26 @@ class ApiController extends Controller
         $itemsData = [];
 
         foreach ($orders as $ok => $order) {
+
+            try {
+                $shippingDetails = unserialize($order->shipping_details); // !empty(unserialize($order->shipping_details)) ? unserialize($order->shipping_details) : null;
+            } catch (\Exception $e) {
+                $shippingDetails = null;
+            }
+
+            $orderedAt = formatDate($order->ordered_at, 'h:i A, d M Y');
+
             foreach ($order->items as $item) {
 
                 $orderItem = $order;
                 $orderItem->tracking_details = $this->orderServices->trackingDetails($order);
-
+                $orderItem['shipping_details'] = $shippingDetails;
                 $orderItem['item'] = $item;
 
                 try {
                     $orderItem['billing_details'] = !empty(unserialize($order->billing_details)) ? unserialize($order->billing_details) : null;
                 } catch (\Throwable $th) {
                     $orderItem['billing_details'] = null;
-                }
-
-                try {
-                    $orderItem['shipping_details'] = !empty(unserialize($order->shipping_details)) ? unserialize($order->shipping_details) : null;
-                } catch (\Throwable $th) {
-                    $orderItem['shipping_details'] = null;
                 }
 
                 try {
@@ -512,6 +526,7 @@ class ApiController extends Controller
                 }
 
                 $orderItem['item']['product_details'] = $productDetails;
+                $orderItem['ordered_at'] = $orderedAt;
 
                 $orderItem['delivery_note'] = 'Delivery Expected Date 22 Jul';
 
@@ -562,7 +577,7 @@ class ApiController extends Controller
             }
 
             // send mail;
-            $this->appMailService->sendMail('orderMail', ['toAddress' => 'bahadurajm@gmail.com'], Order::find($isOrderExists->id));
+            $this->appMailService->sendMail('orderMail', ['toAddress' => auth()->user()->email], Order::find($isOrderExists->id));
 
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $isOrderExists->id,
@@ -704,7 +719,7 @@ class ApiController extends Controller
             ]);
 
             // send mail;
-            $this->appMailService->sendMail('orderMail', ['toAddress' => 'bahadurajm@gmail.com'], Order::find($order->id));
+            $this->appMailService->sendMail('orderMail', ['toAddress' => auth()->user()->email], Order::find($order->id));
 
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $order->id,

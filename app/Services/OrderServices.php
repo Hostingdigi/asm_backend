@@ -210,7 +210,7 @@ class OrderServices
 
             if (!empty($new)) {
                 $bd['active_status'] = 1;
-                $bd['updated_at'] = \Carbon\Carbon::parse($new[0]['created_at'])->format('h:i A, d M Y');
+                $bd['updated_at'] = formatDate($new[0]['created_at'],'h:i A, d M Y');
             }
 
             array_push($buildOrderHis,$bd);

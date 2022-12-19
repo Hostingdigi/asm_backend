@@ -122,10 +122,10 @@
             <td colspan="4">Shipping</td>
             <td>${{number_format($order->shipping_amount,2)}}</td>
         </tr>
-        <tr align="right">
+        <!-- <tr align="right">
             <td colspan="4">Tax</td>
             <td>${{number_format($order->tax_amount,2)}}</td>
-        </tr>
+        </tr> -->
          <tr align="right">
             <td colspan="4">Discount (-) </td>
             <td>${{number_format($order->coupon_amount,2)}}</td>

@@ -11,3 +11,13 @@ if (! function_exists('timezone')) {
         return resolve(Timezone::class);
     }
 }
+
+if (! function_exists('formatDate')) {
+    /**
+     * Access the timezone helper.
+     */
+    function formatDate($date,$format)
+    {
+        return \Carbon\Carbon::parse($date)->setTimezone(!empty(auth()->user->timezone) ? auth()->user->timezone : 'Asia/Singapore')->format($format);
+    }
+}

@@ -56,7 +56,7 @@ class OrderController extends Controller
                     return $paymentStatus;
                 })
                 ->addColumn('ordered', function ($row) {
-                    return \Carbon\Carbon::parse($row->created_at)->format('d/m/Y h:i A');
+                    return formatDate($row->created_at,'d/m/Y h:i A');
                 })
                 ->addColumn('status', function ($row) use ($orderStatus) {
 
