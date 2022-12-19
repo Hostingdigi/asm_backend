@@ -517,7 +517,6 @@ class ApiController extends Controller
         $orders = Order::select(['id', 'order_no', 'total_amount', 'tax_amount', 'shipping_amount', 'coupon_code', 'coupon_amount',
             'billing_details', 'shipping_details', 'ordered_at', 'status'])
             ->where('user_id', auth()->id())
-        // ->with('payment')
             ->latest()
             ->get()->makeHidden(['created_at', 'updated_at']);
 
@@ -526,19 +525,30 @@ class ApiController extends Controller
         foreach ($orders as $ok => $order) {
 
             try {
-                $shippingDetails = unserialize($order->shipping_details); // !empty(unserialize($order->shipping_details)) ? unserialize($order->shipping_details) : null;
+                $shippingDetails = unserialize($order->shipping_details);
             } catch (\Exception $e) {
                 $shippingDetails = null;
             }
 
             $orderedAt = formatDate($order->ordered_at, 'h:i A, d M Y');
 
-            foreach ($order->items as $item) {
+            foreach ($order->items as $orderedItem) {
 
-                $orderItem = $order;
-                $orderItem->tracking_details = $this->orderServices->trackingDetails($order);
+                $orderItem = [
+                    'id' => $order->id,
+                    'order_no' => $order->order_no,
+                    'total_amount' => $order->total_amount,
+                    'tax_amount' => $order->tax_amount,
+                    'shipping_amount' => $order->shipping_amount,
+                    'coupon_code' => $order->coupon_code,
+                    'coupon_amount' => $order->coupon_amount,
+                    'shipping_details' => $order->shipping_details,
+                    'ordered_at' => $order->ordered_at,
+                    'status' => $order->status
+                ];
+                $orderItem['tracking_details'] = $this->orderServices->trackingDetails($order);
                 $orderItem['shipping_details'] = $shippingDetails;
-                $orderItem['item'] = $item;
+                $orderItem['item'] = $orderedItem;
 
                 try {
                     $orderItem['billing_details'] = !empty(unserialize($order->billing_details)) ? unserialize($order->billing_details) : null;
@@ -547,7 +557,7 @@ class ApiController extends Controller
                 }
 
                 try {
-                    $productDetails = !empty(unserialize($item->product_details)) ? unserialize($item->product_details) : null;
+                    $productDetails = !empty(unserialize($orderedItem->product_details)) ? unserialize($orderedItem->product_details) : null;
 
                 } catch (\Throwable $th) {
                     $productDetails = null;
@@ -993,19 +1003,7 @@ class ApiController extends Controller
 
     public function searchProductNames(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'key' => 'required|min:3',
-        ]);
-
-        if ($validator->fails()) {
-            $errors = $validator->errors();
-            return returnApiResponse(false, $errors->all()[0] ?? '');
-        }
-
-        //search by product name
-        $data = Product::select(['id', 'name'])->whereRaw("LOWER(name) LIKE '%" . strtolower(trim($request->key)) . "%'")->activeOnly();
-
-        return returnApiResponse(true, '', $data);
+        return returnApiResponse(true, '', Product::select(['id', 'name'])->activeOnly());
     }
 
     public function searchProducts(Request $request)

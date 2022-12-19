@@ -16,7 +16,7 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        Commands\DemoCron::class,
+        Commands\ExpireCoupons::class,
     ];
 
     /**
@@ -28,8 +28,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
-        $schedule->command('demo:cron')
-            ->everyMinute();
+        $schedule->command('expire:coupons')->everyMinute();
         // $schedule->command('activitylog:clean')->daily();
     }
 
