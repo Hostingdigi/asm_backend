@@ -47,7 +47,9 @@ class PaymentController extends Controller
             return returnApiResponse(false, 'Address is invalid.');
         }
 
-        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
+        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first()
+         : null;
+
 
         if (!$stripeConfig) {
             return returnApiResponse(false, 'Stripe configuation is not available');

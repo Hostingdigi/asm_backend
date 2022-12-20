@@ -9,6 +9,7 @@ use App\Mail\RegisterationMail;
 use App\Models\PasswordForgotRequest;
 use App\Models\ReferralUsers;
 use App\Models\CommonDatas;
+use App\Models\CartCoupon;
 use App\Models\Coupon;
 use App\Services\PaymentServices;
 use GuzzleHttp\Client;
@@ -97,10 +98,16 @@ class ApiAuthController extends Controller
                 'offer_value' => $referralDiscountDetails->value_3, 'coupon_type' => 'amount', 'image' => '', 'start_date' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'), 
                 'description' => 'Referral coupon - '.$user->name]);
             
-                //Child coupon
-            Coupon::create(['nature' => 'referral', 'user_id' => $user->id, 'referral_id' => $ReferralUsers->id, 'title' => 'Referral coupon', 'code' => strtoupper(generateReferralString('referralchild'.$user->id)), 
-                'offer_value' => $referralDiscountDetails->value_3, 'coupon_type' => 'amount', 'image' => '', 'start_date' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'), 
+            //Child coupon
+            $CCCreated = Coupon::create(['nature' => 'referral', 'user_id' => $user->id, 'referral_id' => $ReferralUsers->id, 'title' => 'Referral coupon', 'code' => strtoupper(generateReferralString('referralchild'.$user->id)), 
+                'offer_value' => $referralDiscountDetails->value_2, 'coupon_type' => 'amount', 'image' => '', 'start_date' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'), 
                 'description' => 'Referral coupon - '.$user->name, 'status' => '1']);
+            
+            //Add to cart
+            CartCoupon::create([
+                'user_id' => $user->id,
+                'coupon_id' => $CCCreated->id,
+            ]);
         }
 
         //Create referral code

@@ -906,14 +906,40 @@ class ApiController extends Controller
 
     public function listPromocodes(Request $request)
     {
-        $data = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'])
+
+        $columns = ['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'start_date', 'end_date', 'description'];
+        $data = Coupon::select($columns)
             ->where('nature', 'general')->activeOnly();
+
         $data->map(function ($row) {
             $row['image'] = $row->formatedimageurl;
             return $row;
         });
 
-        return returnApiResponse(true, '', $data);
+        $couponsData = [];
+        $coupons = count($data)>0 ?  $data->toArray() : [];
+
+        if($request->has('user_id') && !empty($request->user_id)){
+            
+            $userExists = User::find($request->user_id);
+
+            if($userExists){
+                $referralCoupon = Coupon::select($columns)->where([['nature','=','referral'],['user_id','=',$request->user_id],['status','=','1']])->first();
+                
+                if($referralCoupon){
+                    $referralCoupon->image = $referralCoupon->formatedimageurl;
+                    $couponsData[] = $referralCoupon->toArray();
+                    // $couponsData = array_merge($couponsData,$coupons);
+                }
+            }
+
+        }
+
+        if(empty($couponsData)){
+            $couponsData = $coupons;
+        }
+        
+        return returnApiResponse(true, '', $couponsData);
     }
 
     public function listFrequentItems(Request $request)
