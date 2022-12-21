@@ -7,7 +7,7 @@
         <x-slot name="header">
             List All Categories
 
-            <a href="#createCategory" data-coreui-toggle="modal" class="btn btn-success float-right">
+            <a href="#createCategory" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right">
                 <i class="fa fa-plus"></i>
                 CREATE
             </a>
@@ -59,8 +59,8 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-success" type="submit">Save</button>
-                            <button class="btn btn-danger" type="button" data-coreui-dismiss="modal">Cancel</button>
+                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
                         </div>
                         </form>
                     </div>
@@ -71,7 +71,7 @@
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="editCategory">Edit Category</h5>
+                            <h5 class="modal-title" id="editCategory">Update Category</h5>
                             <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form method="post" action="" id="editCategoryForm" novalidate enctype="multipart/form-data">
@@ -120,8 +120,8 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-success" type="submit">Save</button>
-                            <button class="btn btn-danger" type="button" data-coreui-dismiss="modal">Cancel</button>
+                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
                         </div>
                         </form>
                     </div>
@@ -140,7 +140,7 @@
                     <th>IMAGE</th>
                     <th>BANNER IMAGE</th>
                     <th>STATUS</th>
-                    <th>ACTIONS</th>
+                    <th width="20%">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>

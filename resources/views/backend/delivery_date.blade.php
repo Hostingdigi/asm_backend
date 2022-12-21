@@ -66,7 +66,7 @@
                 <h3>Special Dates:</h3>
                     </div>
                     <div class="col">
- <a href="#createBrand" data-coreui-toggle="modal" class="btn btn-success float-right">
+ <a href="#createBrand" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right">
                 <i class="fa fa-plus"></i>
                 ADD NEW DATE
             </a>

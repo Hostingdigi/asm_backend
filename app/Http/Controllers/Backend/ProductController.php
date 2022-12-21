@@ -79,7 +79,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $sup = User::select(['id', 'name'])->role('supplier')->activeOnly();
+        $sup = User::select(['id', 'first_name','last_name'])->role('supplier')->activeOnly();
         $brand = Brand::select(['id', 'name'])->activeOnly();
         $category = Category::select(['id', 'name'])->activeOnly();
         $units = Unit::select(['id', 'name'])->activeOnly();

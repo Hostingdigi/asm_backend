@@ -15,11 +15,11 @@
 
 <x-backend.card>
     <x-slot name="header">
-        Edit Coupon
+        {{ $data->nature != 'referral' ? 'Update' : 'View' }} Coupon
     </x-slot>
 
     <x-slot name="headerActions">
-        <a href="{{ route('admin.coupons.index') }}" class="btn btn-sm btn-primary">
+        <a href="{{ route('admin.coupons.index') }}" class="btn btn-sm btn-dark">
             <i class="fa fa-arrow-left"></i>
             BACK
         </a>
@@ -28,11 +28,11 @@
 
 
     <x-slot name="body">
-        
-
-        <form method="post" action="{{ route('admin.coupons.update',$data->id) }}" id="createProductForm" enctype="multipart/form-data">
+            @if($data->nature != 'referral')
+            <form method="post" action="{{ route('admin.coupons.update',$data->id) }}" id="createProductForm" enctype="multipart/form-data">
             {{csrf_field()}}
             @method('PUT')
+            @endif
             <div class="row">
                 <div class="col">
                     <label class="form-label fw-bolder" for="sup">Type</label>
@@ -117,10 +117,12 @@
                     <input class="form-control" value="{{ $data->offer_value }}" name="off_value" required id="off_value" min="1" data-rule-number="true" type="number" placeholder="Ener coupon value">
                 </div>
                 <div class="col">
+                    @if($data->nature != 'referral')
                     <br>
                     <label class="form-label fw-bolder" for="image">Banner Image</label>
                     <br>
                     <input class="" name="image" type="file">
+                    @endif
                     @if(!empty($data->formatedimageurl))
                     <img width="65" height="65" class="img-thumbnail mt-2" src="{{ $data->formatedimageurl }}" alt="">
                     @endif
@@ -136,8 +138,10 @@
         </x-slot>
 
         <x-slot name="footer" >
-            <button type="submit" class="btn btn-success btn-sm float-right"><i class="fa fa-check"></i> SAVE</button>
+            @if($data->nature != 'referral')
+            <button type="submit" class="btn btn-success btn-sm float-right"><i class="fa fa-check"></i> UPDATE</button>
             </form>
+            @endif
         </x-slot>
 
     </x-backend.card>

@@ -121,7 +121,7 @@ class UserService extends BaseService
         try {
             $user = $this->createUser([
                 'type' => $data['type'],
-                'name' => $data['name'],
+                'first_name' => $data['name'],
                 'email' => $data['email'],
                 'mobile' => $data['mobile'] ?? null,
                 'password' => $data['password'],

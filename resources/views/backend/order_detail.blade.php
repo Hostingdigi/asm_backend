@@ -6,7 +6,7 @@
     <x-backend.card>
         <x-slot name="header">
             Order Detail : {{'#'.$order->order_no}}
-            <a href="{{ url('admin/orders') }}" class="btn btn-light float-right btn-sm"> <i class="fa fa-arrow-left"></i> BACK</a>
+            <a href="{{ url('admin/orders') }}" class="btn btn-dark float-right btn-sm"> <i class="fa fa-arrow-left"></i> BACK</a>
         </x-slot>
 
         <x-slot name="body">

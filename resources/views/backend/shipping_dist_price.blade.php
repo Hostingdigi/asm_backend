@@ -9,14 +9,14 @@
 
             <a href="#createDistAmount" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right">
                 <i class="fa fa-plus"></i>
-                ADD
+                CREATE
             </a>
 
             <div class="modal fade" id="createDistAmount" tabindex="-1" aria-labelledby="createBrandLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="createBrandLabel">Add New</h5>
+                            <h5 class="modal-title" id="createBrandLabel">CREATE NEW</h5>
                             <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form method="post" action="{{ route('admin.settings.shipping-distance-amount.store') }}" id="createDistAmountForm" novalidate>
@@ -40,8 +40,8 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-success" type="submit">Save</button>
-                            <button class="btn btn-danger" type="button" data-coreui-dismiss="modal">Cancel</button>
+                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
                         </div>
                         </form>
                     </div>
@@ -95,7 +95,7 @@
                     <th>TO VALUE(KM)</th>
                     <th>AMOUNT</th>
                     <th>STATUS</th>
-                    <th>ACTIONS</th>
+                    <th width="20%">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody></tbody>

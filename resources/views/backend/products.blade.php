@@ -25,7 +25,7 @@
                     <th>IMAGE</th>
                     <th>VARIANTS</th>
                     <th>STATUS</th>
-                    <th>ACTIONS</th>
+                    <th width="20%">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody></tbody>

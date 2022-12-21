@@ -12,7 +12,7 @@
     </x-slot>
 
     <x-slot name="headerActions">
-        <a href="{{ route('admin.coupons.index') }}" class="btn btn-sm btn-primary">
+        <a href="{{ route('admin.coupons.index') }}" class="btn btn-sm btn-dark">
             <i class="fa fa-arrow-left"></i>
             BACK
         </a>
@@ -87,7 +87,7 @@
         </x-slot>
 
         <x-slot name="footer" >
-            <button type="submit" class="btn btn-success btn-sm float-right"><i class="fa fa-check"></i> SAVE</button>
+            <button type="submit" class="btn btn-success btn-sm float-right"><i class="fa fa-check"></i> CREATE</button>
             </form>
         </x-slot>
 

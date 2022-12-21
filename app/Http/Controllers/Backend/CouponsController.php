@@ -22,7 +22,7 @@ class CouponsController extends Controller
     protected $couponTypes = [
         'common' => 'Common',
         'category' => 'Category Based',
-        'supplier' => 'Supplier Based'
+        'supplier' => 'Supplier Based',
     ];
 
     /**
@@ -33,7 +33,7 @@ class CouponsController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Coupon::latest()->bothInActive();
+            $users = Coupon::where('nature','!=','referral')->latest()->bothInActive();
 
             return Datatables::of($users)
                 ->addIndexColumn()
@@ -59,12 +59,15 @@ class CouponsController extends Controller
 
                 })
                 ->addColumn('actions', function ($row) {
-                    $actions = $row->status == '1' ? '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ' :
-                    '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
+                    if ($row->nature == 'referral') {
+                        $actions = '<a title="Update" href="' . route('admin.coupons.edit', $row->id) . '" class="btn btn-outline-info"><i class="fa fa-fw fa-eye"></i></a> ';
+                    } else {
+                        $actions = $row->status == '1' ? '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ' :
+                        '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
 
-                    $actions .= '<a title="Update" href="' . route('admin.coupons.edit', $row->id) . '" class="btn btn-outline-info"><i class="fa fa-fw fa-edit"></i></a> ';
-                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
-
+                        $actions .= '<a title="Update" href="' . route('admin.coupons.edit', $row->id) . '" class="btn btn-outline-info"><i class="fa fa-fw fa-edit"></i></a> ';
+                        $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.coupons.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
+                    }
                     return $actions;
                 })
                 ->rawColumns(['actions', 'status', 'offer_value', 'code'])
@@ -80,7 +83,7 @@ class CouponsController extends Controller
      */
     public function create(Request $request)
     {
-        $supplier = User::select(['id', 'name'])->role('supplier')->activeOnly();
+        $supplier = User::role('supplier')->activeOnly();
         $category = Category::select(['id', 'name'])->activeOnly();
 
         if ($request->ajax()) {
@@ -147,10 +150,11 @@ class CouponsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(Request $request,$id)
+    public function edit(Request $request, $id)
     {
         $data = Coupon::find($id);
-        $supplier = User::select(['id', 'name'])->role('supplier')->activeOnly();
+
+        $supplier = User::role('supplier')->activeOnly();
         $category = Category::select(['id', 'name'])->activeOnly();
 
         if ($request->ajax()) {
@@ -159,10 +163,18 @@ class CouponsController extends Controller
             ]);
         }
 
-        $vendorCustomization = unserialize($data->vendor_customization);
-        $couponTypes = $this->couponTypes;
-        $supplierCategory = $vendorCustomization['coupon_for'] == 'supplier' && !empty($vendorCustomization['vendor']['id']) ? 
+        if ($data->nature == 'referral') {
+            $vendorCustomization = [
+                'coupon_for' => 'referral'
+            ];
+            $couponTypes = $supplierCategory = [];
+        } else {
+
+            $vendorCustomization = unserialize($data->vendor_customization);
+            $couponTypes = $this->couponTypes;
+            $supplierCategory = $vendorCustomization['coupon_for'] == 'supplier' && !empty($vendorCustomization['vendor']['id']) ?
             Category::select(['id', 'name'])->whereIn('id', Product::select(['category_id'])->where('user_id', $vendorCustomization['vendor']['id'])->groupBy('category_id')->activeOnly()->pluck(['category_id'])->all())->activeOnly() : [];
+        }
 
         return view('backend.coupon_edit', compact('supplier', 'category', 'data', 'vendorCustomization', 'couponTypes', 'supplierCategory'));
     }
@@ -178,7 +190,7 @@ class CouponsController extends Controller
     {
         $data = Coupon::find($id);
         $image = $data->image;
-        Coupon::where('id',$id)->update([
+        Coupon::where('id', $id)->update([
             'coupon_type' => $request->coupon_type,
             'title' => $request->title,
             'code' => $request->cup_code,
