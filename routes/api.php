@@ -83,7 +83,7 @@ Route::group(['middleware' => ['json.response']], function () {
             Route::post('remove-item', [ApiController::class, 'removeItem']);
             Route::get('clear', [ApiController::class, 'clearCart']);
             Route::post('checkout', [ApiController::class, 'cartCheckout']);
-
+            Route::get('info', [ApiController::class, 'cartInfo']);
             // Route::get('/{productId}', [ApiController::class, 'productDetails']);
 
         });

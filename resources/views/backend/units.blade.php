@@ -22,7 +22,7 @@
                         <div class="modal-body">
                         {{csrf_field()}}
                             <div class="mb-3">
-                                    <label class="col-form-label">Name</label>
+                                    <label class="col-form-label">Name <sup class="required">*</sup></label>
                                     <input type="text" required class="form-control" id="add_unit_name" name="unit_name" placeholder="Enter your unit name" autofocus />
                             </div>
                         </div>
@@ -48,7 +48,7 @@
                     <input type="hidden" name="_method" value="PUT">
                             <div class="mb-3">
                                     <input type="hidden" name="Unit_id">
-                                    <label class="col-form-label">Name</label>
+                                    <label class="col-form-label">Name <sup class="required">*</sup></label>
                                     <input type="text" required class="form-control" id="unit_name" name="unit_name" placeholder="Enter your unit name" autofocus />
                             </div>
                         </div>

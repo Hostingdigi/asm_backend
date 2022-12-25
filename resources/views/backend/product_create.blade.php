@@ -21,17 +21,9 @@
             <form method="post" action="{{ route('admin.products.store') }}" id="createProductForm" enctype="multipart/form-data">
 
                         {{csrf_field()}}
-                <div class="row">
+                <div class="row">                    
                     <div class="col">
-                        <label class="form-label fw-bolder" for="sup">Supplier</label>
-                        <select required class="form-control" name="sup" required>
-                            @foreach($sup as $su)
-                            <option value="{{ $su->id }}">{{ $su->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label class="form-label fw-bolder" for="exampleFormControlInput1">Category</label>
+                        <label class="form-label fw-bolder" for="exampleFormControlInput1">Category <sup class="required">*</sup></label>
                         <select required class="form-control" name="category" required>
                             @foreach($category as $c)
                             <option value="{{ $c->id }}">{{ $c->name }}</option>
@@ -39,6 +31,18 @@
                         </select>
                     </div>
                     <div class="col">
+                        <label class="form-label fw-bolder" for="pro_name">Name <sup class="required">*</sup></label>
+                        <input class="form-control" id="pro_name" required name="pro_name" type="name" placeholder="Enter product name">
+                    </div>
+                    <div class="col">
+                        <label class="form-label fw-bolder" for="pro_code">Product Code</label>
+                        <input class="form-control" name="pro_code" type="text" placeholder="Enter product code">
+                    </div>
+                    
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <br>
                         <label class="form-label fw-bolder" for="exampleFormControlInput1">Brand</label>
                         <select class="form-control" name="brand">
                             <option value="">--select--</option>
@@ -47,20 +51,17 @@
                             @endforeach
                         </select>
                     </div>
-                    
-                </div>
-                <div class="row">
                     <div class="col">
                         <br>
-                        <label class="form-label fw-bolder" for="pro_code">Product Code</label>
-                        <input class="form-control" name="pro_code" type="text" placeholder="Enter product code">
+                        <label class="form-label fw-bolder" for="sup">Supplier</label>
+                        <select class="form-control" name="sup">
+                            <option value="">--select--</option>
+                            @foreach($sup as $su)
+                            <option value="{{ $su->id }}">{{ $su->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="col">
-                        <br>
-                        <label class="form-label fw-bolder" for="pro_name">Name</label>
-                        <input class="form-control" id="pro_name" required name="pro_name" type="name" placeholder="Enter product name">
-                    </div>
-                    
+
                     <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="pro_image">Main Image</label>
@@ -88,12 +89,12 @@
                 <input type="hidden" id="var_rows" name="var_rows" value="1">
                 <div class="row var_row" id="main_row_1">
                     <div class="col">
-                        <label class="form-label fw-bolder" for="var_name_1">Name</label>
+                        <label class="form-label fw-bolder" for="var_name_1">Name <sup class="required">*</sup></label>
                         <input class="form-control" name="var_name_1" type="text" required placeholder="Enter Name">
                     </div>
 
                     <div class="col">
-                        <label class="form-label fw-bolder" for="var_unit_1">Unit</label>
+                        <label class="form-label fw-bolder" for="var_unit_1">Unit <sup class="required">*</sup></label>
                         <select required class="form-control" name="var_unit_1">
                             @foreach($units as $u)
                             <option value="{{ $u['id'] }}">{{ $u['name'] }}</option>
@@ -101,7 +102,7 @@
                         </select>
                     </div>
                     <div class="col">
-                        <label class="form-label fw-bolder" for="var_price_1">Price</label>
+                        <label class="form-label fw-bolder" for="var_price_1">Price <sup class="required">*</sup></label>
                         <input class="form-control" required name="var_price_1" type="text" placeholder="Enter Price">
                     </div>
                     <div class="col">
@@ -180,11 +181,11 @@
             var incVal = parseInt($("#var_rows").val());
             incVal++;
             var htmlContent = '<div class="row var_row" id="main_row_'+incVal+'">';
-                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_name_'+incVal+'">Name</label>';
+                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_name_'+incVal+'">Name <sup class="required">*</sup></label>';
                 htmlContent += '<input class="form-control" name="var_name_'+incVal+'" type="text" required placeholder="Enter Name"></div>';
-                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_unit_'+incVal+'">Unit</label>';
+                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_unit_'+incVal+'">Unit <sup class="required">*</sup></label>';
                 htmlContent += '<select required class="form-control" name="var_unit_'+incVal+'">'+unitOptions+'</select></div>';
-                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_price_'+incVal+'">Price</label>';
+                htmlContent += '<div class="col"><br><label class="form-label fw-bolder" for="var_price_'+incVal+'">Price <sup class="required">*</sup></label>';
                 htmlContent += '<input class="form-control" required name="var_price_'+incVal+'" type="text" placeholder="Enter Price"></div>';
                 htmlContent += '<div class="col"><button type="button" style="margin-top:3rem" data-rowid="'+incVal+'" class="btn btn-danger btn-sm deleteRow" style="margin-top:2rem"><i class="fa fa-minus"></i> REMOVE</button></div>';
                 htmlContent += '</div>';

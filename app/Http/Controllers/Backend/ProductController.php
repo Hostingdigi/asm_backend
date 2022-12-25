@@ -113,7 +113,7 @@ class ProductController extends Controller
 
         $createClinic = Product::create([
             'code' => !empty($request->pro_code) ? $request->pro_code : '',
-            'user_id' => $request->sup,
+            'user_id' => !empty($request->sup) ? $request->sup : null,
             'category_id' => $request->category,
             'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
@@ -209,7 +209,10 @@ class ProductController extends Controller
             }
         }
 
+        $userId = null;
+
         $createClinic = Product::where('id', $id)->update([
+            'user_id' => !empty($request->sup) ? $request->sup : null,
             'code' => !empty($request->pro_code) ? $request->pro_code : '',
             'category_id' => $request->category,
             'brand_id' => !empty($request->brand) ? $request->brand : null,

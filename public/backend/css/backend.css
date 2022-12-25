@@ -6410,6 +6410,11 @@ sub {
 sup {
     top: -0.5em;
 }
+sup.required {
+    font-size: 20px;
+    color: red;
+    top: auto;
+}
 a {
     text-decoration: none;
     background-color: transparent;

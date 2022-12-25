@@ -34,7 +34,7 @@
                             <div class="row">
                                 <div class="col-6">
                                     <div class="form-group">
-                                        <label class="col-form-label">Name</label>
+                                        <label class="col-form-label">Name <sup class="required">*</sup></label>
                                         <input type="text" required class="form-control" name="category_name" placeholder="Enter category name" autofocus />
                                     </div>
                                 </div>
@@ -90,7 +90,7 @@
                             <div class="row">
                                 <div class="col-6">
                                     <div class="form-group">
-                                        <label class="col-form-label">Name</label>
+                                        <label class="col-form-label">Name <sup class="required">*</sup></label>
                                         <input type="text" required class="form-control" id="cat_name" name="category_name" placeholder="Enter category name" autofocus />
                                     </div>
                                 </div>

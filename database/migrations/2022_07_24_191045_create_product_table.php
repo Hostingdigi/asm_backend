@@ -15,7 +15,7 @@ class CreateProductTable extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('user_id')->nullable()->constrained('users');
             $table->foreignId('category_id')->constrained('categories');
             $table->foreignId('brand_id')->nullable()->constrained('brands');
             $table->mediumText('code')->nullable();

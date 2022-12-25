@@ -46,6 +46,15 @@ class ApiController extends Controller
         $this->appMailService = $appMailService;
     }
 
+    public function cartInfo(Request $request)
+    {
+        $data = $this->cartServices->listItems();
+        return returnApiResponse(true, '', [
+            "cart_items" => count($data['cart_items']) ?? 0,
+            "total_price" => $data['sub_total'] ?? 0,
+        ]);
+    }
+
     public function pCheck(Request $request)
     {
         $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
@@ -147,7 +156,7 @@ class ApiController extends Controller
 
         if ($data) {
 
-            $data->supplier_name = $data->supplier->name;
+            $data->supplier_name = !empty($data->user_id) ? $data->supplier->name : null;
             $data->category_name = Category::find($data->category_id)->name;
             $data->brand_name = !empty($data->brand_id) ? Brand::find($data->brand_id)->name : '';
             $data->cover_image = $data->formatedcoverimageurl;
@@ -544,7 +553,7 @@ class ApiController extends Controller
                     'coupon_amount' => $order->coupon_amount,
                     'shipping_details' => $order->shipping_details,
                     'ordered_at' => $order->ordered_at,
-                    'status' => $order->status
+                    'status' => $order->status,
                 ];
                 $orderItem['tracking_details'] = $this->orderServices->trackingDetails($order);
                 $orderItem['shipping_details'] = $shippingDetails;
@@ -834,24 +843,28 @@ class ApiController extends Controller
         $data = ProductWishlist::with(['product' => function ($query) {
             $query->select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
                 'description')->with('variants:id,product_id,name,price,unit_id');
-        }])->where('user_id', auth()->id())->latest()->get();
+        }])->where('user_id', auth()->id())->latest()->get()->pluck('product');
 
         $products = [];
 
-        foreach ($data as $key => $row) {
+        $data->map(function ($row) {
+            $row->cover_image = $row->formatedcoverimageurl;
+            $row->variants->map(function ($vr) {
+                $vr->name .= $vr->unit->name;
+                unset($vr->unit);
+                return $vr;
+            });
 
-            $product = $row->product;
-            $product->supplier_name = $product->supplier->name;
-            $product->category_name = Category::find($product->category_id)->name;
-            $product->brand_name = !empty($product->brand_id) ? Brand::find($product->brand_id)->name : '';
+            $row->supplier_name = !empty($row->user_id) ? $row->supplier->name : null;
+            $row->category_name = $row->category->name;// Category::find($row->category_id)->name;
+            $row->brand_name = !empty($row->brand_id) ? $row->brand->name : '';
+            unset($row->supplier);
+            unset($row->category);
 
-            $product->cover_image = $product->formatedcoverimageurl;
-            array_push($products, $row->product);
-            unset($product->supplier);
+            return $row;
+        });
 
-        }
-
-        return returnApiResponse(true, '', $products);
+        return returnApiResponse(true, '', $data);
     }
 
     public function applyPromocode(Request $request)
@@ -917,16 +930,16 @@ class ApiController extends Controller
         });
 
         $couponsData = [];
-        $coupons = count($data)>0 ?  $data->toArray() : [];
+        $coupons = count($data) > 0 ? $data->toArray() : [];
 
-        if($request->has('user_id') && !empty($request->user_id)){
-            
+        if ($request->has('user_id') && !empty($request->user_id)) {
+
             $userExists = User::find($request->user_id);
 
-            if($userExists){
-                $referralCoupon = Coupon::select($columns)->where([['nature','=','referral'],['user_id','=',$request->user_id],['status','=','1']])->first();
-                
-                if($referralCoupon){
+            if ($userExists) {
+                $referralCoupon = Coupon::select($columns)->where([['nature', '=', 'referral'], ['user_id', '=', $request->user_id], ['status', '=', '1']])->first();
+
+                if ($referralCoupon) {
                     $referralCoupon->image = $referralCoupon->formatedimageurl;
                     $couponsData[] = $referralCoupon->toArray();
                     // $couponsData = array_merge($couponsData,$coupons);
@@ -935,10 +948,10 @@ class ApiController extends Controller
 
         }
 
-        if(empty($couponsData)){
+        if (empty($couponsData)) {
             $couponsData = $coupons;
         }
-        
+
         return returnApiResponse(true, '', $couponsData);
     }
 
@@ -953,7 +966,7 @@ class ApiController extends Controller
             return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
-        $paginateCount = 2;
+        $paginateCount = 20;
         $page = $request->has('page') ? $request->page : 1;
         $limitCount = !in_array($page, [0, 1]) ? $paginateCount * ($request->page - 1) : 0;
 
@@ -975,16 +988,17 @@ class ApiController extends Controller
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1')->orderBy('price');
         }]);
 
-        // if (count($productIds) > 0) {
         $products = $products->whereIn('id', $productIds);
-        // } else {
-        //     $products = $products->offset($limitCount)->limit(20);
-        // }
 
         $products = $products->activeOnly();
 
         $products = $products->map(function ($row) {
-            $row['cover_image'] = $row->formatedcoverimageurl;
+            $row->cover_image = $row->formatedcoverimageurl;
+            $row->variants->map(function ($vr) {
+                $vr->name .= $vr->unit->name;
+                unset($vr->unit);
+                return $vr;
+            });
             return $row;
         });
 
