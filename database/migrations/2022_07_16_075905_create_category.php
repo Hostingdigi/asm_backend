@@ -20,6 +20,7 @@ class CreateCategory extends Migration
             $table->mediumText('long_name')->nullable();
             $table->mediumText('image')->nullable();
             $table->mediumText('banner_image')->nullable();
+            $table->mediumText('package_options')->nullable();
             $table->mediumText('description');
             $table->enum('status', ['0', '1', '2'])->default('1');
             $table->timestamps();

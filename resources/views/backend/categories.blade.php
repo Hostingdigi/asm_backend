@@ -2,8 +2,12 @@
 
 @section('title', __('Categories'))
 
+@push('after-styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+@endpush
+
 @section('content')
-    <x-backend.card>
+<x-backend.card>
         <x-slot name="header">
             List All Categories
 
@@ -41,7 +45,16 @@
                                 <div class="col-6">
                                     <div class="form-group">
                                         <label class="col-form-label">Long Name</label>
-                                        <input type="text" class="form-control" name="long_name" placeholder="(Optional)" />
+                                        <input type="text" class="form-control" name="long_name" placeholder="" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Packing Options</label>
+                                        <select name="pack_options[]" id="pack_options" class="js-example-basic-multiple" multiple="multiple">
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -97,7 +110,16 @@
                                 <div class="col-6">
                                     <div class="form-group">
                                         <label class="col-form-label">Long Name</label>
-                                        <input type="text" class="form-control" name="long_name" id="long_name" placeholder="(Optional)" />
+                                        <input type="text" class="form-control" name="long_name" id="long_name" placeholder="" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label class="col-form-label">Packing Options</label>
+                                        <select name="pack_options[]" id="pack_optionsEdit" class="js-example-basic-multiple" multiple="multiple">
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -152,8 +174,19 @@
 @endsection
 
 @push('after-scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready( function () {
+
+        $("#pack_options").select2({
+            width : '100%',
+            tags: true
+        });
+
+        $("#pack_optionsEdit").select2({
+            width : '100%',
+            tags: true
+        });
 
         $("body").on("click", ".editRow", function(e)
         {
@@ -168,6 +201,21 @@
                     $("#parent_id").val(result['data']['parent_id']);
                     $("#cat_name").val(result['data']['name']);
                     $("#long_name").val(result['data']['long_name']);
+                    let options = [];
+                    let pOptions = result['data']['package_options'];
+                    if(pOptions.length){
+                        $('#pack_optionsEdit').select2('destroy');
+                        pOptions.forEach(v => options.push({id:v,text:v}));
+                        $('#pack_optionsEdit').select2({
+                            width:'100%',
+                            tags:true,
+                            data: options 
+                        });
+                        $("#pack_optionsEdit").val(pOptions).trigger('change');
+                    }else{
+                        $('#pack_optionsEdit').empty().trigger("change");
+                    }
+
                     if(!result['data']['image']){
                         $("#pImg").attr("src","").addClass("d-none");
                     }else{

@@ -185,7 +185,11 @@ class ApiController extends Controller
                 return $var;
             });
 
+            $packageOptions = !empty($data->category->package_options) ? unserialize($data->category->package_options) : null;
+            $data->package_options = !empty($packageOptions) ? $packageOptions : null;
+
             unset($data->supplier);
+            unset($data->category);
         }
 
         return returnApiResponse(!empty($data) ? true : false, !empty($data) ? '' : 'Product is not available', !empty($data) ? $data : null);
@@ -327,7 +331,7 @@ class ApiController extends Controller
 
         }
 
-        return returnApiResponse(true, '', [
+        return returnApiResponse((!count($data) ? false : true), '', [
             'is_last_page' => $paginateData ? false : true,
             'category' => $category,
             'products' => $data,
@@ -856,7 +860,7 @@ class ApiController extends Controller
             });
 
             $row->supplier_name = !empty($row->user_id) ? $row->supplier->name : null;
-            $row->category_name = $row->category->name;// Category::find($row->category_id)->name;
+            $row->category_name = $row->category->name; // Category::find($row->category_id)->name;
             $row->brand_name = !empty($row->brand_id) ? $row->brand->name : '';
             unset($row->supplier);
             unset($row->category);
