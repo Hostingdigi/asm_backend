@@ -102,7 +102,7 @@ class CategoryController extends Controller
             'long_name' => trim($request->long_name),
             'image' => $imageName,
             'banner_image' => $bannerImage,
-            'package_options' => !empty($request->pack_options) ? serialize($request->pack_options) : serialize([]),
+            'cut_options' => !empty($request->pack_options) ? serialize($request->pack_options) : serialize([]),
             'description' => '',
         ]);
 
@@ -138,7 +138,7 @@ class CategoryController extends Controller
         $data = Category::find($id);
         $data->image = !empty($data->image) ? asset('storage/'.$data->image) : '';
         $data->banner_image = !empty($data->banner_image) ? asset('storage/'.$data->banner_image) : '';
-        $data->package_options = !empty($data->package_options) ? unserialize($data->package_options) : [];
+        $data->cut_options = !empty($data->cut_options) ? unserialize($data->cut_options) : [];
         return response()->json([
             'data' => $data
         ]);
@@ -181,7 +181,7 @@ class CategoryController extends Controller
             'name' => trim($request->category_name),
             'long_name' => trim($request->long_name),
             'image' => $imageName,
-            'package_options' => !empty($request->pack_options) ? serialize($request->pack_options) : serialize([]),
+            'cut_options' => !empty($request->pack_options) ? serialize($request->pack_options) : serialize([]),
             'banner_image' => $bannerImageName,
             'description' => '',
         ]);

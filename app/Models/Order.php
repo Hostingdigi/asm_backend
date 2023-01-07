@@ -23,6 +23,9 @@ class Order extends Model
         'shipping_details',
         'ordered_at',
         'payment_status',
+        'preferred_delivery_date',
+        'delivery_slot',
+        'delivery_instructions',
         'status'
     ];
 

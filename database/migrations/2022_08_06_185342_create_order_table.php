@@ -17,7 +17,7 @@ class CreateOrderTable extends Migration
             $table->id();
             $table->tinyInteger('is_dummy_order')->default(0);
             $table->mediumText('order_no')->nullable();
-            $table->mediumText('payment_mode')->nullable();
+            $table->mediumText('payment_mode')->default('pod')->nullable();
             $table->foreignId('user_id')->constrained('users');
             $table->unsignedBigInteger('payment_id')->nullable();
             $table->decimal('total_amount', 8, 2)->default(0);
@@ -29,6 +29,9 @@ class CreateOrderTable extends Migration
             $table->mediumText('billing_details')->nullable();
             $table->mediumText('shipping_details')->nullable();
             $table->dateTime('ordered_at');
+            $table->date('preferred_delivery_date')->nullable();
+            $table->mediumText('delivery_slot')->nullable();
+            $table->mediumText('delivery_instructions')->nullable();
             $table->tinyInteger('payment_status')->default(0);
             $table->enum('status', ['1', '2'])->default('1');
             $table->timestamps();

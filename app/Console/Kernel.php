@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         Commands\ExpireCoupons::class,
+        Commands\RemoveOldDeliveryBlockDays::class,
     ];
 
     /**
@@ -28,7 +29,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping();
+        $schedule->command('queue:retry all')->everyFiveMinutes()->withoutOverlapping();
+
         $schedule->command('expire:coupons')->everyMinute();
+        $schedule->command('remove:deliolddates')->daily();
         // $schedule->command('activitylog:clean')->daily();
     }
 

@@ -87,6 +87,7 @@ class OrderServices
                         'image' => $product->cover_image,
                         'variant_name' => $value->variant->name,
                         'unit_name' => $value->variant->unit->name,
+                        'cut_options' => $value->cut_options,
                     ]),
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -104,6 +105,7 @@ class OrderServices
         if (!empty($cartData['coupon_details'])) {
             $couponCode = $cartData['coupon_details']->toArray();
         }
+        $totalAmount-=$couponAmount;
 
         //Check already have any dummy order
         $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();

@@ -52,7 +52,7 @@
                             <div class="row">
                                 <div class="col-12">
                                     <div class="form-group">
-                                        <label class="col-form-label">Packing Options</label>
+                                        <label class="col-form-label">Cut Options</label>
                                         <select name="pack_options[]" id="pack_options" class="js-example-basic-multiple" multiple="multiple">
                                         </select>
                                     </div>
@@ -117,7 +117,7 @@
                             <div class="row">
                                 <div class="col-12">
                                     <div class="form-group">
-                                        <label class="col-form-label">Packing Options</label>
+                                        <label class="col-form-label">Cut Options</label>
                                         <select name="pack_options[]" id="pack_optionsEdit" class="js-example-basic-multiple" multiple="multiple">
                                         </select>
                                     </div>
@@ -202,7 +202,7 @@
                     $("#cat_name").val(result['data']['name']);
                     $("#long_name").val(result['data']['long_name']);
                     let options = [];
-                    let pOptions = result['data']['package_options'];
+                    let pOptions = result['data']['cut_options'];
                     if(pOptions.length){
                         $('#pack_optionsEdit').select2('destroy');
                         pOptions.forEach(v => options.push({id:v,text:v}));

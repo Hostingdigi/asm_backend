@@ -19,6 +19,7 @@ class CreateCartTable extends Migration
             $table->foreignId('product_id')->constrained('products');
             $table->foreignId('variant_id')->constrained('product_variants');
             $table->integer('quantity')->default(0);
+            $table->mediumText('cut_options')->nullable();
             $table->timestamps();
         });
     }

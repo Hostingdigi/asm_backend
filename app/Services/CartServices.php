@@ -17,7 +17,7 @@ class CartServices
     public function listItems()
     {
         $cartTotal = 0;
-        $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity'])->where('user_id', auth()->id())
+        $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity','cut_options'])->where('user_id', auth()->id())
             ->with(['product' => function ($query) {
                 $query->select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
                     $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])->with(['unit:id,name']);
@@ -31,6 +31,7 @@ class CartServices
             $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
             $row->unit_id = $row->variant->unit_id;
             $row->unit_name = $row->variant->name . $row->variant->unit->name;
+            $row->cut_options = !empty($row->cut_options) ? unserialize($row->cut_options) : null;
 
             unset($row->variant);
             return $row;

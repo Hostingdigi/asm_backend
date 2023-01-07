@@ -40,6 +40,8 @@ class ExpireCoupons extends Command
     public function handle()
     {
         $fetchCoupons = Coupon::where([['status', '=', '1'], ['nature', '=', 'general']])
+            ->whereNotNull('start_date')
+            ->whereNotNull('end_date')
             ->where('end_date', '<=', \Carbon\Carbon::now()->format('Y-m-d H:i:s'))
             ->get()->pluck('id');
 

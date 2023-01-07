@@ -22,8 +22,8 @@ class CreateCouponsTable extends Migration
             $table->mediumText('code');
             $table->mediumText('image')->nullable();
             $table->decimal('offer_value', 8, 2);
-            $table->dateTime('start_date');
-            $table->dateTime('end_date');
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
             $table->mediumText('description')->nullable();
             $table->enum('status', ['0', '1', '2'])->default('0');
             $table->timestamps();

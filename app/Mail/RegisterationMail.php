@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use App\Domains\Auth\Models\User;
+use App\Models\CommonDatas;
 
 class RegisterationMail extends Mailable implements ShouldQueue
 {
@@ -36,6 +37,10 @@ class RegisterationMail extends Mailable implements ShouldQueue
      */
     public function build()
     {
-        return $this->subject('Account Created!')->view('emails.register');
+        $appStoreLinks = CommonDatas::select(['id', 'value_1 as android_store'])->where([['key', '=', 'app_store_link'], ['status', '=', '1']])->first();
+        $androidStore = $appStoreLinks ? (!empty($appStoreLinks->android_store) ? $appStoreLinks->android_store : '#') : '#';
+        $appleStore = $appStoreLinks ? (!empty($appStoreLinks->android_store) ? $appStoreLinks->android_store : '#') : '#';
+
+        return $this->subject('Account Created!')->view('emails.register', compact('androidStore', 'appleStore'));
     }
 }

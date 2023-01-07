@@ -17,6 +17,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductWishlist;
+use App\Models\WeekDaysModel;
 use App\Rules\ValidateProduct;
 use App\Rules\validateProductIdArray;
 use App\Rules\ValidateProductVariant;
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Models\DeliveryDaysModel;
 
 class ApiController extends Controller
 {
@@ -185,8 +187,8 @@ class ApiController extends Controller
                 return $var;
             });
 
-            $packageOptions = !empty($data->category->package_options) ? unserialize($data->category->package_options) : null;
-            $data->package_options = !empty($packageOptions) ? $packageOptions : null;
+            $packageOptions = !empty($data->category->cut_options) ? unserialize($data->category->cut_options) : null;
+            $data->cut_options = !empty($packageOptions) ? $packageOptions : null;
 
             unset($data->supplier);
             unset($data->category);
@@ -376,15 +378,18 @@ class ApiController extends Controller
             ['variant_id', '=', $request->variant_id],
         ])->first();
 
+        $updateCondition = [];
+        $updateCondition['quantity'] = $request->quantity;
+        if ($request->has('cut_options')) {
+            $updateCondition['cut_options'] = !empty($request->cut_options) ? serialize($request->cut_options) : null;
+        }
+
         if ($request->action == 'add') {
 
             if ($isFound) {
 
-                Cart::where([
-                    ['id', '=', $isFound->id],
-                ])->update([
-                    'quantity' => $isFound->quantity + $request->quantity,
-                ]);
+                $updateCondition['quantity'] = $isFound->quantity + $request->quantity;
+                $isFound->update($updateCondition);
 
             } else {
                 Cart::create([
@@ -392,6 +397,7 @@ class ApiController extends Controller
                     'product_id' => $request->product_id,
                     'variant_id' => $request->variant_id,
                     'quantity' => $request->quantity,
+                    'cut_options' => !empty($request->cut_options) ? serialize($request->cut_options) : null,
                 ]);
             }
 
@@ -405,17 +411,12 @@ class ApiController extends Controller
                 } else if ($request->quantity == $isFound->quantity) {
                     $quantity = 0;
                 }
+                $updateCondition['quantity'] = $quantity;
 
                 if ($quantity == 0) {
-                    Cart::where([
-                        ['id', '=', $isFound->id],
-                    ])->delete();
+                    $isFound->delete();
                 } else {
-                    Cart::where([
-                        ['id', '=', $isFound->id],
-                    ])->update([
-                        'quantity' => $quantity,
-                    ]);
+                    $isFound->update($updateCondition);
                 }
             }
         }
@@ -466,7 +467,23 @@ class ApiController extends Controller
 
         $cartDetails = $this->cartServices->listItems();
 
+        $deliverySlots = null;
+        $deliverySlotsResults = CommonDatas::select(['id', 'value_1 as slots'])->where([['key', '=', 'delivery_slots'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
+        if ($deliverySlotsResults) {
+            try {
+                $deliverySlots = unserialize($deliverySlotsResults->slots);
+            } catch (\Throwable $th) {}
+        }
+
+        $deliveryDaysBlockResults = WeekDaysModel::selectRaw('LOWER(day) day')->where('status', '1')->orderBy('day')->get()->pluck('day');
+        $deliveryDateBlockResults = DeliveryDaysModel::selectRaw('day_date')->where('status', '1')->orderBy('day_date')->get()->pluck('day_date');
+
         $data = [
+            'delivery_blocked' => [
+                'days' => count($deliveryDaysBlockResults) ? $deliveryDaysBlockResults : null,
+                'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : null
+            ],
+            'delivery_slots' => $deliverySlots,
             'delivery_note' => [
                 'label' => 'Delivery Expected',
                 'date' => '22 Jul',
@@ -620,6 +637,9 @@ class ApiController extends Controller
                 'is_dummy_order' => 0,
                 'status' => $request->payment_status ? 3 : 9,
                 'payment_status' => $request->payment_status,
+                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? trim($request->preferred_delivery_date) : null,
+                'delivery_slot' => $request->has('delivery_slot') ? trim($request->delivery_slot) : null,
+                'delivery_instructions' => $request->has('delivery_instructions') ? trim($request->delivery_instructions) : null,
             ]);
 
             Payment::where('order_id', $isOrderExists->id, )->update([
@@ -697,6 +717,7 @@ class ApiController extends Controller
                     'image' => $product->cover_image,
                     'variant_name' => $value->variant->name,
                     'unit_name' => $value->variant->unit->name,
+                    'cut_options' => $value->cut_options,
                 ];
 
                 $orderItems[] = [
@@ -725,6 +746,7 @@ class ApiController extends Controller
             if (!empty($cartData['coupon_details'])) {
                 $couponCode = $cartData['coupon_details']->toArray();
             }
+            $totalAmount -= $couponAmount;
 
             //Create order
             $order = Order::create([
@@ -739,6 +761,9 @@ class ApiController extends Controller
                 'coupon_code' => serialize($couponCode),
                 'billing_details' => serialize($billingDetails),
                 'shipping_details' => serialize($shippingDetails),
+                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? trim($request->preferred_delivery_date) : null,
+                'delivery_slot' => $request->has('delivery_slot') ? trim($request->delivery_slot) : null,
+                'delivery_instructions' => $request->has('delivery_instructions') ? trim($request->delivery_instructions) : null,
                 'ordered_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
                 'status' => 3,
             ]);

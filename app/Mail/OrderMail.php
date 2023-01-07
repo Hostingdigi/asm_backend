@@ -2,11 +2,12 @@
 
 namespace App\Mail;
 
+use App\Models\CommonDatas;
+use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Order;
 
 class OrderMail extends Mailable implements ShouldQueue
 {
@@ -29,6 +30,13 @@ class OrderMail extends Mailable implements ShouldQueue
      */
     public function build()
     {
-        return $this->subject('Order has been placed - #'.$this->order->order_no)->view('emails.order');
+        $ccEmail = CommonDatas::select(['id', 'value_1 as emails'])->where([['key', '=', 'cc_emails'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
+        $ccEmails = $ccEmail ? explode(',', $ccEmail->emails) : null;
+
+        $thisBuildObject = $this->subject('Order has been placed - #' . $this->order->order_no)->view('emails.order');
+        if (!empty($ccEmails)) {
+            $thisBuildObject = $thisBuildObject->bcc($ccEmails);
+        }
+        return $thisBuildObject;
     }
 }
