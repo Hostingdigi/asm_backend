@@ -44,7 +44,10 @@ class CartServices
         ]);
         $totalAmount = (($cartTotal + $deliveryAmount) - $discountAmount['discountAmount']);
 
+        $thresholdAmountResults = CommonDatas::select(['id', 'value_1 as amount'])->where([['key', '=', 'cart_threshold_amount'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
+
         return [
+            'threshold_amount' => $thresholdAmountResults ? $thresholdAmountResults->amount : 0,
             'sub_total' => number_format($cartTotal, 2),
             'delivery_amount' => number_format($deliveryAmount, 2),
             'discount_amount' => number_format($discountAmount['discountAmount'], 2),
