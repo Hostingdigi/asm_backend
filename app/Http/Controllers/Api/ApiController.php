@@ -12,6 +12,7 @@ use App\Models\Category;
 use App\Models\CommonDatas;
 use App\Models\Countries;
 use App\Models\Coupon;
+use App\Models\DeliveryDaysModel;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -30,7 +31,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use App\Models\DeliveryDaysModel;
 
 class ApiController extends Controller
 {
@@ -424,6 +424,33 @@ class ApiController extends Controller
         return returnApiResponse(true, ($request->action == 'add' ? 'Item added!' : 'Item Updated!'), $this->cartServices->listItems());
     }
 
+    public function cartUpdateCutOptions(Request $request)
+    {
+        $request['id'] = !empty($request->cart_id) ? $request->cart_id : null;
+        $validator = Validator::make($request->all(), [
+            'id' => [
+                'required',
+                Rule::exists('cart')->where(function ($query) {
+                    $query->where('user_id', auth()->id());
+                }),
+            ],
+            'cut_options' => 'required|nullable'
+        ], [], ['id' => 'cart id']);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            return returnApiResponse(false, $errors->all()[0] ?? '');
+        }
+
+        $isFound = Cart::where([
+            ['user_id', '=', auth()->id()],
+            ['id', '=', $request->id],
+        ])->update(['cut_options' => !empty($request->cut_options) ? serialize($request->cut_options) : null]);
+
+        return returnApiResponse(true, 'Updated!');
+
+    }
+
     public function removeItem(Request $request)
     {
         $isExists = Cart::where([
@@ -481,7 +508,7 @@ class ApiController extends Controller
         $data = [
             'delivery_blocked' => [
                 'days' => count($deliveryDaysBlockResults) ? $deliveryDaysBlockResults : null,
-                'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : null
+                'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : null,
             ],
             'delivery_slots' => $deliverySlots,
             'delivery_note' => [

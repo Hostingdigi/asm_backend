@@ -3,6 +3,14 @@
 @section('title', __('Orders'))
 
 @section('content')
+<style>
+    .cut_opts {
+        border: 1px solid #ccc;
+        background-color: aliceblue;
+        padding: 5px;
+        border-radius: 5px;
+    }
+</style>
     <x-backend.card>
         <x-slot name="header">
             Order Detail : {{'#'.$order->order_no}}
@@ -35,12 +43,14 @@
                                 <th class="text-white">Order Details</th>
                                 <th class="text-white">Customer Details</th>
                                 <th class="text-white">Shipping Address</th>
+                                <th class="text-white">Delivery Options</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>
                                     <p class="mb-1"><strong>{{'#'.$order->order_no}}</strong></p>
+                                    <p class="mb-1">Order Date: <strong>{{  \Carbon\Carbon::parse($order->ordered_at)->format('d/m/Y') }}</strong></p>
                                     <p class="mb-1">Order Status: <b>{{ $order->order_status->label ?? '-' }}</b></p>
                                     <p class="mb-1">Payment Mode: <b>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay On Delivery' }}</b></p>
                                     <p class="mb-1">Payment Status: <b>{{  $order->payment_mode == 'pod' ? ($order->payment_status == 1 ? 'Paid' : 'Pending') : 
@@ -62,7 +72,6 @@
                                 $shippingDetails = [];
                             }
                     @endphp
-                    <h4>Shipping Address:</h4>
                     @if(!empty($shippingDetails))
                     <p class="mb-1"><strong>{{ $shippingDetails['name'] }}</strong></p>
                     <p class="mb-0">{{ $shippingDetails['address'] }},</p>
@@ -74,6 +83,20 @@
                     @else
                     <p>Address is not available.</p>
                     @endif
+                                </td>
+                                
+                                <td>
+                                    @php
+                        $shippingDetails = [];
+                            try{
+                                $shippingDetails = unserialize($order->shipping_details);
+                            }catch(Exception $e){
+                                $shippingDetails = [];
+                            }
+                    @endphp
+                    <p class="mb-1">Preferred Delivery Date: <strong>{{ !empty($order->preferred_delivery_date) ? \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d/m/Y') : '-' }},</strong></p>
+                    <p class="mb-1">Delivery Slot: <strong>{{ !empty($order->delivery_slot) ? $order->delivery_slot : '-' }}</strong>,</p>
+                    <p class="mb-0">Delivery Instructions: <strong>{{ !empty($order->delivery_instructions) ? $order->delivery_instructions : '-' }}</strong>,</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -104,19 +127,43 @@
                 <tbody>
                     @foreach($order->items as $ik => $item)
                         @php
-                            $productDetails = [];
+                            $productDetails = $cutOptions = [];
                                 try{
                                     $productDetails = unserialize($item->product_details);
                                 }catch(Exception $e){
                                     $productDetails = [];
+                                }
+                                try{
+                                    $cutOptions = isset($productDetails['cut_options']) ? unserialize($productDetails['cut_options']) : [];
+                                }catch(Exception $e){
+                                    $cutOptions = [];
                                 }
                         @endphp
                     <tr class="">
                         <td>{{ $ik+1 }}</td>
                         <td>
                             <img src="{{ (!empty($productDetails['image']) ? asset('storage/'.$productDetails['image']) : url('images/noimage.png')) }}" width="75" height="75"></td>
-                        <td>{{ $productDetails['name'] }}
+                        <td>
+                            <p class="mb-0" style="font-size:22px;">{{ $productDetails['name'] }}</p>
                             <p>[{{ $productDetails['variant_name'].$productDetails['unit_name'] }}]</p>
+                            @if(!empty($cutOptions))
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>CUT OPTIONS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            @foreach($cutOptions as $cut)
+                                            <span class="cut_opts">{{$cut}}</span>
+                                            @endforeach
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            @endif
                         </td>
                         <td align="center">{{ $item->quantity }}</td>
                         <td align="right"><strong>SGD {{ $item->price }}</strong></td>

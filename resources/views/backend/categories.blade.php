@@ -161,6 +161,7 @@
                     <th>NAME</th>
                     <th>IMAGE</th>
                     <th>BANNER IMAGE</th>
+                    <th>CUT OPTIONS</th>
                     <th>STATUS</th>
                     <th width="20%">ACTIONS</th>
                     </tr>
@@ -274,6 +275,7 @@
                     { data: 'name', name: 'name' },
                     { data: 'image', name: 'image' },
                     { data: 'banner_image', name: 'banner_image' },
+                    { data: 'cut_options', name: 'cut_options' },
                     { data: 'status', name: 'status' },
                     { data: 'actions', name: 'actions' }
                 ]

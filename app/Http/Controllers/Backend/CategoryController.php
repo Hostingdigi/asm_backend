@@ -23,7 +23,7 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Category::select(['id', 'parent_id', 'name', 'image', 'banner_image', 'status'])->orderBy('id','desc')
+            $users = Category::select(['id', 'parent_id', 'name', 'image', 'banner_image', 'status', 'cut_options'])->orderBy('id','desc')
                 ->bothInActive();
 
             return Datatables::of($users)
@@ -33,6 +33,13 @@ class CategoryController extends Controller
                 })
                 ->addColumn('name', function ($row) {
                     return ucwords($row->name);
+                })
+                ->addColumn('cut_options', function ($row) {
+                    $cutOptions = '';
+                    if(!empty($row->cut_options)){
+                        $cutOptions = implode(',',unserialize($row->cut_options));
+                    }
+                    return $cutOptions;
                 })
                 ->addColumn('image', function ($row) {
                     return !empty($row->image) ? '<img class="img-thumbnail" width="75" height="75" src="' . Storage::url($row->image) . '" >' : '';

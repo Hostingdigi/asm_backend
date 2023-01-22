@@ -84,6 +84,7 @@ Route::group(['middleware' => ['json.response']], function () {
             Route::get('clear', [ApiController::class, 'clearCart']);
             Route::post('checkout', [ApiController::class, 'cartCheckout']);
             Route::get('info', [ApiController::class, 'cartInfo']);
+            Route::post('update-cut-options', [ApiController::class, 'cartUpdateCutOptions']);
             // Route::get('/{productId}', [ApiController::class, 'productDetails']);
 
         });

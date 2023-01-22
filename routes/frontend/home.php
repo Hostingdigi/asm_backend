@@ -3,6 +3,10 @@
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\TermsController;
 use Tabuna\Breadcrumbs\Trail;
+use App\Mail\RegisterationMail;
+use App\Models\Order;
+use App\Domains\Auth\Models\User;
+// use Mail;
 
 /*
  * Frontend Controllers
@@ -13,6 +17,19 @@ Route::get('/', [HomeController::class, 'index'])
     ->breadcrumbs(function (Trail $trail) {
         $trail->push(__('Home'), route('frontend.index'));
     });
+
+Route::get('test_mail', function () {
+
+    // Mail::send('emails.test2', [], function ($m) {
+    //     $m->to('bahadurajm@gmail.com', 'Lal')->subject('Test');
+    // });
+
+    // Mail::to('bahadurajm@gmail.com')->later(now()->addSeconds(2), new OrderMail(Order::find(54)));
+
+    return (new RegisterationMail(User::find(2)))->render();
+    // return view('emails.test');
+
+});
 
 Route::get('referral-by', [HomeController::class, 'referralBy'])->name('referral-by');
 
