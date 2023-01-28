@@ -31,6 +31,7 @@ Route::group(['middleware' => ['json.response']], function () {
     Route::post('verify-otp', [ApiAuthController::class, 'verifyOTP']);
     Route::post('update-forgot-password', [ApiAuthController::class, 'forgotPasswordUpdate']);
 
+    Route::get('home-page/banners', [ApiController::class, 'homePageBanners']);
     Route::get('categories', [ApiController::class, 'listCategories']);
     Route::get('brands', [ApiController::class, 'listBrands']);
     Route::get('promocodes', [ApiController::class, 'listPromocodes']);

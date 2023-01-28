@@ -174,6 +174,14 @@
                     
                     <li class="c-sidebar-nav-item">
                         <x-utils.link
+                            :href="route('admin.settings.application-data')"
+                            class="c-sidebar-nav-link"
+                            :text="__('Application Data')"
+                            :active="activeClass(Route::is('admin.settings.application-data'), 'c-active')" />
+                    </li>
+
+                    <li class="c-sidebar-nav-item">
+                        <x-utils.link
                             :href="route('admin.settings.shipping-distance-amount.index')"
                             class="c-sidebar-nav-link"
                             :text="__('Shipping Distance Amount')"

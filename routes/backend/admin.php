@@ -103,6 +103,13 @@ Route::prefix('settings')->group(function () {
     Route::post('delivery-date/remove-day', 'Backend\DeliveryDateController@removeDay')->name('settings.delivery-date.removeDay');
     Route::post('delivery-date/save-date', 'Backend\DeliveryDateController@saveDate')->name('settings.delivery-date.saveDate');
 
+    Route::get('application-data', 'Backend\SettingsController@index')->name('settings.application-data');
+    Route::get('application-data/edit/{rowId}', 'Backend\SettingsController@editData')->name('settings.application-data.edit');
+    Route::post('application-data/update', 'Backend\SettingsController@updateData')->name('settings.application-data.update');
+    Route::post('application-data/get-resource', 'Backend\SettingsController@getResource')->name('settings.application-data.getResource');
+    Route::post('application-data/store-banner', 'Backend\SettingsController@storeBanner')->name('settings.application-data.storeBanner');
+    Route::get('application-data/hbanner/update/status/{userId}/{statusCode}', 'Backend\SettingsController@updateStatus')->name('settings.application-data.updateStatus');
+
     Route::get('shipping-distance-amount', 'Backend\ShippingDistanceAmountController@index')->name('settings.shipping-distance-amount.index');
     Route::post('shipping-distance-amount-store', 'Backend\ShippingDistanceAmountController@store')->name('settings.shipping-distance-amount.store');
     Route::get('shipping-distance-amount/update/status/{userId}/{statusCode}', 'Backend\ShippingDistanceAmountController@updateStatus')->name('shipping-distance-amount.updateStatus');

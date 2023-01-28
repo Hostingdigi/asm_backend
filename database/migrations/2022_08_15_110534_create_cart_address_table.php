@@ -26,6 +26,10 @@ class CreateCartAddressTable extends Migration
             $table->integer('zipcode');
             $table->mediumText('state');
             $table->integer('country_id');
+            $table->mediumText('latitude')->nullable();
+            $table->mediumText('longitude')->nullable();
+            $table->mediumText('formatted_address')->nullable();
+            $table->mediumText('place_id')->nullable();
             $table->enum('status',['0','1','2'])->default('1')->comment('0 is deactive, 1 is active, 2 is removed');
             $table->timestamps();
         });

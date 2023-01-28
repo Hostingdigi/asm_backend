@@ -89,6 +89,7 @@ class ApiController extends Controller
     {
         $headQLatLang = CommonDatas::select(['id', 'value_1 as lat', 'value_2 as lang'])->where([['key', '=', 'head-quarters-lat-lang'], ['status', '=', '1']])->first();
         $appCurrency = CommonDatas::select(['id', 'value_1 as code', 'value_2 as name'])->where([['key', '=', 'app-currency'], ['status', '=', '1']])->first();
+
         $data = [
             'app' => [
                 'head_quarters' => [
@@ -434,7 +435,7 @@ class ApiController extends Controller
                     $query->where('user_id', auth()->id());
                 }),
             ],
-            'cut_options' => 'required|nullable'
+            'cut_options' => 'required|nullable',
         ], [], ['id' => 'cart id']);
 
         if ($validator->fails()) {
@@ -545,10 +546,14 @@ class ApiController extends Controller
                 "email_address" => $billing['email'],
                 "mobile" => $billing['mobile'],
                 "address" => $billing['address'],
-                "city" => $billing['city'],
-                "state" => $billing['state'],
+                "city" => !empty($billing['city']) ? $billing['city'] : "",
+                "state" => !empty($billing['state']) ? $billing['state'] : "",
                 "zipcode" => $billing['zipcode'],
                 "country_id" => $billing['country_id'],
+                "latitude" => !empty($billing['latitude']) ? $billing['latitude'] : null,
+                "longitude" => !empty($billing['longitude']) ? $billing['longitude'] : null,
+                "formatted_address" => !empty($billing['formatted_address']) ? $billing['formatted_address'] : null,
+                "place_id" => !empty($billing['place_id']) ? $billing['place_id'] : null,
             ];
         }
 
@@ -566,6 +571,16 @@ class ApiController extends Controller
     public function getAddress(Request $request)
     {
         return returnApiResponse(true, '', CartAddress::where('user_id', auth()->id())->activeOnly());
+    }
+
+    public function homePageBanners(Request $request)
+    {
+        $data = CommonDatas::select(['id', 'value_1 as image', 'value_2 as path','value_3 as redirect_id'])->where([['key', '=', 'app-homepage-banner'], ['status', '=', '1']])->orderBy('value_4')->get();
+        $data->map(function($row){
+            $row->image = asset('storage/' . $row->image);
+            return $row;
+        });
+        return returnApiResponse(true, '', $data);
     }
 
     public function listMyOrders(Request $request)

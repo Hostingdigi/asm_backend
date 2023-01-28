@@ -56,6 +56,19 @@
     @stack('after-scripts')
 
     <script>
+        let validationOptions = {
+            errorElement: "span",
+            errorPlacement: function(error, element) {
+                error.addClass("text-danger");
+                element.after(error).addClass('is-invalid');
+            },
+            highlight: function(element, errorClass, validClass) {
+                $(element).removeClass("is-valid").addClass("is-invalid");
+            },
+            unhighlight: function(element, errorClass, validClass) {
+                $(element).removeClass("is-invalid").addClass("is-valid");
+            }
+        };
         $(document).ready( function () {
             $("body").on("click", ".changeStatus", function(e)
             {
