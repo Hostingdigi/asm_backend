@@ -545,7 +545,7 @@ class ApiController extends Controller
                 "name" => $billing['name'],
                 "email_address" => $billing['email'],
                 "mobile" => $billing['mobile'],
-                "address" => $billing['address'],
+                "address" => !empty($billing['address']) ? $billing['address'] : "",
                 "city" => !empty($billing['city']) ? $billing['city'] : "",
                 "state" => !empty($billing['state']) ? $billing['state'] : "",
                 "zipcode" => $billing['zipcode'],
@@ -575,8 +575,8 @@ class ApiController extends Controller
 
     public function homePageBanners(Request $request)
     {
-        $data = CommonDatas::select(['id', 'value_1 as image', 'value_2 as path','value_3 as redirect_id'])->where([['key', '=', 'app-homepage-banner'], ['status', '=', '1']])->orderBy('value_4')->get();
-        $data->map(function($row){
+        $data = CommonDatas::select(['id', 'value_1 as image', 'value_2 as path', 'value_3 as redirect_id'])->where([['key', '=', 'app-homepage-banner'], ['status', '=', '1']])->orderBy('value_4')->get();
+        $data->map(function ($row) {
             $row->image = asset('storage/' . $row->image);
             return $row;
         });

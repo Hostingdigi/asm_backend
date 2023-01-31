@@ -29,7 +29,7 @@ class ShippingDistanceAmountController extends Controller
                     return $row->from_distance . ' KM';
                 })
                 ->addColumn('to_km', function ($row) {
-                    return $row->to_distance . ' KM';
+                    return !empty($row->to_distance) ? $row->to_distance . ' KM' : '-';
                 })
                 ->addColumn('amount', function ($row) {
                     return 'SGD ' . number_format($row->amount, 2);

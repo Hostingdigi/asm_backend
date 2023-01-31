@@ -24,7 +24,7 @@
                         {{csrf_field()}}
                             <div class="row">
                                 <div class="col-6">
-                                    <label class="col-form-label">From</label>
+                                    <label class="col-form-label">From <sup class="required">*</sup></label>
                                     <input type="text" required data-rule-number="true" min="0" class="form-control" id="from_dist" name="from_dist" placeholder="Ex: 0" autofocus />
                                 </div>
                                 <div class="col-6">
@@ -34,7 +34,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-12">
-                                    <label class="col-form-label">Amount</label>
+                                    <label class="col-form-label">Amount <sup class="required">*</sup></label>
                                     <input type="text" data-rule-number="true" min="0" required class="form-control" id="ds_amount" name="ds_amount" placeholder="amount in $." />
                                 </div>
                             </div>
@@ -60,7 +60,7 @@
                         {{csrf_field()}}
                             <div class="row">
                                 <div class="col-6">
-                                    <label class="col-form-label">From</label>
+                                    <label class="col-form-label">From <sup class="required">*</sup></label>
                                     <input type="text" required data-rule-number="true" min="0" class="form-control" id="from_dist" name="from_dist" placeholder="Ex: 0" autofocus />
                                 </div>
                                 <div class="col-6">
@@ -70,7 +70,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-12">
-                                    <label class="col-form-label">Amount</label>
+                                    <label class="col-form-label">Amount <sup class="required">*</sup></label>
                                     <input type="text" data-rule-number="true" min="0" required class="form-control" id="ds_amount" name="ds_amount" placeholder="amount in $." />
                                 </div>
                             </div>
