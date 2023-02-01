@@ -93,8 +93,8 @@ class ApiController extends Controller
         $data = [
             'app' => [
                 'head_quarters' => [
-                    'lat' => $headQLatLang ? $headQLatLang->lat : null,
-                    'lang' => $headQLatLang ? $headQLatLang->lang : null,
+                    'lat' => $headQLatLang ? (float) $headQLatLang->lat : null,
+                    'lang' => $headQLatLang ? (float) $headQLatLang->lang : null,
                 ],
                 'currency' => [
                     'code' => $appCurrency ? $appCurrency->code : null,
@@ -537,7 +537,20 @@ class ApiController extends Controller
     public function saveAddress(Request $request)
     {
         if (in_array($request->action, ['save', 'update'])) {
+
             $billing = $request->address;
+            $userLatitude = !empty($billing['latitude']) ? $billing['latitude'] : null;
+            $userLongitude = !empty($billing['longitude']) ? $billing['longitude'] : null;
+
+            //update distance
+            $headQLatLang = CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
+            // $distanceValue = $this->orderServices->getGoogleDistance([
+            //     'latitude' => $userLatitude,
+            //     'longitude' => $userLongitude
+            // ]);
+            return $headQLatLang;
+            die();
+
             $shippingAddress = [
                 "address_type" => $billing['address_type'],
                 "address_type_label" => $billing['address_type_label'],
@@ -550,8 +563,8 @@ class ApiController extends Controller
                 "state" => !empty($billing['state']) ? $billing['state'] : "",
                 "zipcode" => $billing['zipcode'],
                 "country_id" => $billing['country_id'],
-                "latitude" => !empty($billing['latitude']) ? $billing['latitude'] : null,
-                "longitude" => !empty($billing['longitude']) ? $billing['longitude'] : null,
+                "latitude" => $userLatitude,
+                "longitude" => $userLongitude,
                 "formatted_address" => !empty($billing['formatted_address']) ? $billing['formatted_address'] : null,
                 "place_id" => !empty($billing['place_id']) ? $billing['place_id'] : null,
             ];

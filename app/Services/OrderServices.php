@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartAddress;
+use App\Models\CommonDatas;
 use App\Models\Order;
 use App\Models\OrderHistory;
 use App\Models\OrderItem;
@@ -22,6 +23,33 @@ class OrderServices
     {
         $this->cartServices = $cartServices;
         $this->cartAddress = $cartAddress;
+    }
+
+    public function getGoogleDistance($latLong)
+    {
+        $distanceValue = 0;
+        $googleDistanceApiKey = CommonDatas::select(['id', 'value_1 as url', 'value_2 as apikey'])->where([['key', '=', 'google_distance_api_key'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
+        $headQLatLang = CommonDatas::select(['id', 'value_1 as lat', 'value_2 as lang'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
+        if ($headQLatLang && $googleDistanceApiKey && (!empty($latLong['latitude']) && !empty($latLong['longitude']))) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                $response = $client->request('GET', $googleDistanceApiKey->url, ['query' => [
+                    'origins' => ($headQLatLang->lat . ',' . $headQLatLang->lang),
+                    'destinations' => ($latLong['latitude'] . ',' . $latLong['longitude']),
+                    'key' => $googleDistanceApiKey->apikey,
+                ]]);
+                $distanceResults = json_decode($response->getBody(), true);
+                if (!empty($distanceResults)) {
+                    if (!empty($distanceResults['status']) && $distanceResults['status'] == 'OK' && !empty($distanceResults['rows'][0]['elements'][0]['distance']['value'])) {
+                        $distanceValue = $distanceResults['rows'][0]['elements'][0]['distance']['value'];
+                        $distanceValue = $distanceValue > 0 ? $distanceValue/1000 : 0;
+                    }
+                }
+            } catch (\Exception $e) {
+                $distanceValue = 0;
+            }
+        }
+        return $distanceValue;
     }
 
     public function updateOrderStatusHistory($data)
@@ -105,7 +133,7 @@ class OrderServices
         if (!empty($cartData['coupon_details'])) {
             $couponCode = $cartData['coupon_details']->toArray();
         }
-        $totalAmount-=$couponAmount;
+        $totalAmount -= $couponAmount;
 
         //Check already have any dummy order
         $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();

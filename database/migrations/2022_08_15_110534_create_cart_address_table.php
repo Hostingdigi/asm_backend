@@ -30,6 +30,8 @@ class CreateCartAddressTable extends Migration
             $table->mediumText('longitude')->nullable();
             $table->mediumText('formatted_address')->nullable();
             $table->mediumText('place_id')->nullable();
+            $table->decimal('distance',8,2)->default(0);
+            $table->dateTime('warehouse_updated_at')->nullable();
             $table->enum('status',['0','1','2'])->default('1')->comment('0 is deactive, 1 is active, 2 is removed');
             $table->timestamps();
         });
