@@ -8,21 +8,41 @@ use App\Models\CartCoupon;
 use App\Models\CommonDatas;
 use App\Models\Coupon;
 use App\Models\ShippingDistAmounts;
-use App\Services\OrderServices;
 
 class CartServices
 {
-    protected $orderServices = null;
-
-    public function __construct(OrderServices $orderServices)
-    {
-        $this->orderServices = $orderServices;
-    }
 
     public function clearUserCart()
     {
         CartCoupon::where('user_id', auth()->id())->delete();
         Cart::where('user_id', auth()->id())->delete();
+    }
+
+    public function getGoogleDistance($latLong)
+    {
+        $distanceValue = 0;
+        $googleDistanceApiKey = CommonDatas::select(['id', 'value_1 as url', 'value_2 as apikey'])->where([['key', '=', 'google_distance_api_key'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
+        $headQLatLang = CommonDatas::select(['id', 'value_1 as lat', 'value_2 as lang'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
+        if ($headQLatLang && $googleDistanceApiKey && (!empty($latLong['latitude']) && !empty($latLong['longitude']))) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                $response = $client->request('GET', $googleDistanceApiKey->url, ['query' => [
+                    'origins' => ($headQLatLang->lat . ',' . $headQLatLang->lang),
+                    'destinations' => ($latLong['latitude'] . ',' . $latLong['longitude']),
+                    'key' => $googleDistanceApiKey->apikey,
+                ]]);
+                $distanceResults = json_decode($response->getBody(), true);
+                if (!empty($distanceResults)) {
+                    if (!empty($distanceResults['status']) && $distanceResults['status'] == 'OK' && !empty($distanceResults['rows'][0]['elements'][0]['distance']['value'])) {
+                        $distanceValue = $distanceResults['rows'][0]['elements'][0]['distance']['value'];
+                        $distanceValue = $distanceValue > 0 ? $distanceValue / 1000 : 0;
+                    }
+                }
+            } catch (\Exception $e) {
+                $distanceValue = 0;
+            }
+        }
+        return $distanceValue;
     }
 
     public function listItems($addtionalData = null)
@@ -118,7 +138,7 @@ class CartServices
                         } else { //Find distance
 
                             CartAddress::where('id', $cartAddress->id)->update([
-                                'distance' => $this->orderServices->getGoogleDistance([
+                                'distance' => $this->getGoogleDistance([
                                     'latitude' => !empty($cartAddress->latitude) ? $cartAddress->latitude : null,
                                     'longitude' => !empty($cartAddress->longitude) ? $cartAddress->longitude : null,
                                 ]),
