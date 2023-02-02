@@ -582,12 +582,6 @@ class ApiController extends Controller
                 ]),
                 'warehouse_updated_at' => CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first()->updated_at ?? null
             ]);
-            // if($headQLatLang){
-            //     if($updatedAddress->warehouse_updated_at != $headQLatLang->updated_at){
-
-            //     }
-            // }
-            // return $headQLatLang;
         }
 
         return returnApiResponse(true, ($request->action == 'delete' ? 'Removed!' : 'Saved!'), $this->getAddress($request)->original['data']);

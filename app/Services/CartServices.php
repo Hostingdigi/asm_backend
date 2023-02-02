@@ -108,7 +108,17 @@ class CartServices
                         if ($cartAddress->distance != 0) {
                             $distance = $cartAddress->distance;
                         } else { //Find distance
-                            $distance = 0;
+
+                            CartAddress::where('id', $cartAddress->id)->update([
+                                'distance' => $this->orderServices->getGoogleDistance([
+                                    'latitude' => !empty($cartAddress->latitude) ? $cartAddress->latitude : null,
+                                    'longitude' => !empty($cartAddress->longitude) ? $cartAddress->longitude : null,
+                                ]),
+                                'warehouse_updated_at' => CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first()->updated_at ?? null,
+                            ]);
+
+                            $distance = CartAddress::find($cartAddress->id)->distance ?? 0;
+
                         }
 
                         if ($distance != 0) {
