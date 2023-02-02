@@ -79,7 +79,7 @@ Route::group(['middleware' => ['json.response']], function () {
         //Cart
         Route::prefix('cart')->group(function () {
 
-            Route::get('list', [ApiController::class, 'listCartItems']);
+            Route::post('list', [ApiController::class, 'listCartItems']);
             Route::post('add-item', [ApiController::class, 'addItem']);
             Route::post('remove-item', [ApiController::class, 'removeItem']);
             Route::get('clear', [ApiController::class, 'clearCart']);

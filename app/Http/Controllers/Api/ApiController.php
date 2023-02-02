@@ -343,7 +343,9 @@ class ApiController extends Controller
 
     public function listCartItems(Request $request)
     {
-        return returnApiResponse(true, '', $this->cartServices->listItems());
+        return returnApiResponse(true, '', $this->cartServices->listItems([
+            'addressId' => $request->address_id ?? null
+        ]));
     }
 
     public function addItem(Request $request)
@@ -493,7 +495,7 @@ class ApiController extends Controller
             return returnApiResponse(false, $errors->all()[0] ?? '');
         }
 
-        $cartDetails = $this->cartServices->listItems();
+        $cartDetails = $this->cartServices->listItems(['addressId' => $request->address_id]);
 
         $deliverySlots = null;
         $deliverySlotsResults = CommonDatas::select(['id', 'value_1 as slots'])->where([['key', '=', 'delivery_slots'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
@@ -541,16 +543,6 @@ class ApiController extends Controller
             $billing = $request->address;
             $userLatitude = !empty($billing['latitude']) ? $billing['latitude'] : null;
             $userLongitude = !empty($billing['longitude']) ? $billing['longitude'] : null;
-
-            //update distance
-            $headQLatLang = CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first();
-            // $distanceValue = $this->orderServices->getGoogleDistance([
-            //     'latitude' => $userLatitude,
-            //     'longitude' => $userLongitude
-            // ]);
-            return $headQLatLang;
-            die();
-
             $shippingAddress = [
                 "address_type" => $billing['address_type'],
                 "address_type_label" => $billing['address_type_label'],
@@ -573,9 +565,29 @@ class ApiController extends Controller
         if ($request->action == 'delete') {
             CartAddress::where([['user_id', '=', auth()->id()], ['id', '=', $request->id]])->delete();
         } else if ($request->action == 'save') {
-            CartAddress::create($shippingAddress);
+            $addressCreated = CartAddress::create($shippingAddress);
+            $addressId = $addressCreated->id;
         } else if ($request->action == 'update') {
+            $addressId = $request->id;
             CartAddress::where([['user_id', '=', auth()->id()], ['id', '=', $request->id]])->update($shippingAddress);
+        }
+
+        //update distance
+        if (in_array($request->action, ['save', 'update'])) {
+            
+            CartAddress::where('id', $addressId)->update([
+                'distance' => $this->orderServices->getGoogleDistance([
+                    'latitude' => $userLatitude,
+                    'longitude' => $userLongitude,
+                ]),
+                'warehouse_updated_at' => CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first()->updated_at ?? null
+            ]);
+            // if($headQLatLang){
+            //     if($updatedAddress->warehouse_updated_at != $headQLatLang->updated_at){
+
+            //     }
+            // }
+            // return $headQLatLang;
         }
 
         return returnApiResponse(true, ($request->action == 'delete' ? 'Removed!' : 'Saved!'), $this->getAddress($request)->original['data']);

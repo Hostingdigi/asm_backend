@@ -1,10 +1,13 @@
 <?php
 
 namespace App\Services;
+
 use App\Models\Cart;
+use App\Models\CartAddress;
 use App\Models\CartCoupon;
-use App\Models\Coupon;
 use App\Models\CommonDatas;
+use App\Models\Coupon;
+use App\Models\ShippingDistAmounts;
 
 class CartServices
 {
@@ -14,10 +17,10 @@ class CartServices
         Cart::where('user_id', auth()->id())->delete();
     }
 
-    public function listItems()
+    public function listItems($addtionalData = null)
     {
         $cartTotal = 0;
-        $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity','cut_options'])->where('user_id', auth()->id())
+        $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity', 'cut_options'])->where('user_id', auth()->id())
             ->with(['product' => function ($query) {
                 $query->select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
                     $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])->with(['unit:id,name']);
@@ -40,6 +43,7 @@ class CartServices
         $cartTotal = $cartItems->sum('price');
         $discountAmount = $this->coupounCalculations(['cartTotal' => $cartTotal]);
         $deliveryAmount = $this->shippingCalculations([
+            'addressId' => $addtionalData['addressId'] ?? null,
             'cartTotal' => ($cartTotal - $discountAmount['discountAmount']),
         ]);
         $totalAmount = (($cartTotal + $deliveryAmount) - $discountAmount['discountAmount']);
@@ -87,17 +91,46 @@ class CartServices
     public function shippingCalculations($data = null)
     {
         $shippingAmount = 0;
-
         //Check if free shipping available
         $isFreeShipping = CommonDatas::select(['id', 'value_1'])->where([['key', '=', 'free-shipping-config'], ['status', '=', '1']])->first();
 
         if ($isFreeShipping) {
-            if ($data['cartTotal'] > $isFreeShipping->value_1) {
-                return $shippingAmount;
+            if ($data['cartTotal'] < $isFreeShipping->value_1) {
+                //Calculate shipping price based on KM
+                if (!empty($data['addressId'])) {
+                    $cartAddress = CartAddress::where([
+                        ['user_id', '=', auth()->id()],
+                        ['id', '=', $data['addressId']],
+                    ])->first();
+
+                    if ($cartAddress) {
+                        $distance = 0;
+                        if ($cartAddress->distance != 0) {
+                            $distance = $cartAddress->distance;
+                        } else { //Find distance
+                            $distance = 0;
+                        }
+
+                        if ($distance != 0) {
+
+                            $distanceAmount = ShippingDistAmounts::whereRaw("'" . $distance . "' >= from_distance and '" . $distance . "' <= to_distance")
+                                ->where('status', '1')->first();
+
+                            // Above Limit
+                            $distanceAmountAbove = ShippingDistAmounts::whereRaw("'" . $distance . "' >= from_distance and (to_distance=0 || to_distance is null)")
+                                ->where('status', '1')->first();
+
+                            if ($distanceAmount) {
+                                $shippingAmount = $distanceAmount->amount;
+                            } else if ($distanceAmountAbove) {
+                                $shippingAmount = $distanceAmountAbove->amount;
+                            }
+                        }
+                    }
+                }
+
             }
         }
-
-        //Calculate shipping price based on KM
 
         return $shippingAmount;
     }
