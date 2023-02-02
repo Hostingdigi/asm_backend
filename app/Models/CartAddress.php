@@ -21,4 +21,14 @@ class CartAddress extends Model
         return ["user_id", "address_type_label", "name", "email_address", "mobile", "address_type", "address", "city", "state", "zipcode", "country_id",
             "latitude", "longitude", "formatted_address", "place_id"];
     }
+
+    public function getLatitudeAttribute($value)
+    {
+        return !empty($value) ? (float) $value : null;
+    }
+
+    public function getLongitudeAttribute($value)
+    {
+        return !empty($value) ? (float) $value : null;
+    }
 }

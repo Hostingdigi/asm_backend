@@ -8,9 +8,17 @@ use App\Models\CartCoupon;
 use App\Models\CommonDatas;
 use App\Models\Coupon;
 use App\Models\ShippingDistAmounts;
+use App\Services\OrderServices;
 
 class CartServices
 {
+    protected $orderServices = null;
+
+    public function __construct(OrderServices $orderServices)
+    {
+        $this->orderServices = $orderServices;
+    }
+
     public function clearUserCart()
     {
         CartCoupon::where('user_id', auth()->id())->delete();
@@ -51,7 +59,7 @@ class CartServices
         $thresholdAmountResults = CommonDatas::select(['id', 'value_1 as amount'])->where([['key', '=', 'cart_threshold_amount'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
 
         return [
-            'threshold_amount' => $thresholdAmountResults ? $thresholdAmountResults->amount : 0,
+            'threshold_amount' => (float) ($thresholdAmountResults ? $thresholdAmountResults->amount : 0),
             'sub_total' => number_format($cartTotal, 2),
             'delivery_amount' => number_format($deliveryAmount, 2),
             'discount_amount' => number_format($discountAmount['discountAmount'], 2),
