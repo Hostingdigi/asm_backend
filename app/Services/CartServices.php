@@ -57,7 +57,7 @@ class CartServices
 
         $cartItems->map(function ($row) {
 
-            $row->product->cover_image = $row->product->formatedcoverimageurl;
+            $row->product->cover_image = str_replace(asset('storage').'/'.asset('storage').'/',asset('storage/').'/',$row->product->formatedcoverimageurl);
             $row->price = $row->variant->price * $row->quantity;
             $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
             $row->unit_id = $row->variant->unit_id;

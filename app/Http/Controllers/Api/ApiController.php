@@ -344,7 +344,7 @@ class ApiController extends Controller
     public function listCartItems(Request $request)
     {
         return returnApiResponse(true, '', $this->cartServices->listItems([
-            'addressId' => $request->address_id ?? null
+            'addressId' => $request->address_id ?? null,
         ]));
     }
 
@@ -391,7 +391,8 @@ class ApiController extends Controller
 
             if ($isFound) {
 
-                $updateCondition['quantity'] = $isFound->quantity + $request->quantity;
+                //$updateCondition['quantity'] = $isFound->quantity + $request->quantity;
+                $updateCondition['quantity'] = $request->quantity;
                 $isFound->update($updateCondition);
 
             } else {
@@ -408,12 +409,12 @@ class ApiController extends Controller
 
             if ($isFound) {
 
-                $quantity = 0;
-                if ($request->quantity < $isFound->quantity) {
-                    $quantity = $isFound->quantity - $request->quantity;
+                $quantity = empty($request->quantity) ? 0 : $request->quantity;
+                /*if ($request->quantity < $isFound->quantity) {
+                $quantity = $isFound->quantity - $request->quantity;
                 } else if ($request->quantity == $isFound->quantity) {
-                    $quantity = 0;
-                }
+                $quantity = 0;
+                }*/
                 $updateCondition['quantity'] = $quantity;
 
                 if ($quantity == 0) {
@@ -574,13 +575,13 @@ class ApiController extends Controller
 
         //update distance
         if (in_array($request->action, ['save', 'update'])) {
-            
+
             CartAddress::where('id', $addressId)->update([
                 'distance' => $this->orderServices->getGoogleDistance([
                     'latitude' => $userLatitude,
                     'longitude' => $userLongitude,
                 ]),
-                'warehouse_updated_at' => CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first()->updated_at ?? null
+                'warehouse_updated_at' => CommonDatas::select(['id', 'updated_at'])->where([['key', '=', 'head-quarters-lat-lang'], ['value_1', '!=', ''], ['value_2', '!=', ''], ['status', '=', '1']])->first()->updated_at ?? null,
             ]);
         }
 
@@ -1042,7 +1043,14 @@ class ApiController extends Controller
             $couponsData = $coupons;
         }
 
-        return returnApiResponse(true, '', $couponsData);
+        $couponBanner = CommonDatas::select(['id', 'value_1 as image'])->where([['key', '=', 'coupon_banner'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
+
+        return returnApiResponse(true, '', [
+            'banner' => [
+                'image' => url($couponBanner ? $couponBanner->image : 'images/noimage.png'),
+            ],
+            'coupons' => $couponsData,
+        ]);
     }
 
     public function listFrequentItems(Request $request)
