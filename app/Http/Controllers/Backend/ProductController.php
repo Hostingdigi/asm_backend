@@ -29,7 +29,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = Product::latest()->bothInActive();
+            $users = Product::orderBy('sorting')->bothInActive();
 
             return Datatables::of($users)
                 ->addIndexColumn()
@@ -40,7 +40,7 @@ class ProductController extends Controller
                     return ucwords($row->name);
                 })
                 ->addColumn('image', function ($row) {
-                    return !empty($row->cover_image) ? '<img class="img-thumbnail" width="75" height="75" src="' . url('storage/'.$row->cover_image) . '">' : '';
+                    return !empty($row->cover_image) ? '<img class="img-thumbnail" width="75" height="75" src="' . url('storage/' . $row->cover_image) . '">' : '';
                 })
                 ->addColumn('varants', function ($row) {
                     return $row->variants->count();
@@ -79,7 +79,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $sup = User::select(['id', 'first_name','last_name'])->role('supplier')->activeOnly();
+        $sup = User::select(['id', 'first_name', 'last_name'])->role('supplier')->activeOnly();
         $brand = Brand::select(['id', 'name'])->activeOnly();
         $category = Category::select(['id', 'name'])->activeOnly();
         $units = Unit::select(['id', 'name'])->activeOnly();
@@ -89,6 +89,7 @@ class ProductController extends Controller
             'brand' => $brand,
             'units' => $units,
             'category' => $category,
+            'sorting' => (Product::bothInActive()->count() + 1),
         ]);
     }
 
@@ -102,14 +103,13 @@ class ProductController extends Controller
     {
         $productVariants = [];
 
-        if($request->hasFile('add_image') && count($request->add_image)>0)
-        {
+        if ($request->hasFile('add_image') && count($request->add_image) > 0) {
             foreach ($request->add_image as $key => $file) {
-                echo $file->getClientOriginalName().' - ';
+                echo $file->getClientOriginalName() . ' - ';
             }
         }
 
-        $coverImage = $request->hasFile('pro_image') ? Storage::put('images',$request->file('pro_image')) : '';
+        $coverImage = $request->hasFile('pro_image') ? Storage::put('images', $request->file('pro_image')) : '';
 
         $createClinic = Product::create([
             'code' => !empty($request->pro_code) ? $request->pro_code : '',
@@ -117,6 +117,7 @@ class ProductController extends Controller
             'category_id' => $request->category,
             'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
+            'sorting' => $request->sorting,
             'cover_image' => $coverImage,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
         ]);
@@ -171,7 +172,9 @@ class ProductController extends Controller
         $product = Product::find($id);
         $units = Unit::select(['id', 'name'])->activeOnly();
         $vars = $product->variants()->where('status', '!=', '2')->get();
-        $addImages = $product->images()->orderBy('display_order','asc')->get();
+        $addImages = $product->images()->orderBy('display_order', 'asc')->get();
+
+        $product->sorting = $product->sorting == 0 ? (Product::bothInActive()->count() + 1) : $product->sorting;
 
         return view('backend.product_edit', [
             'sup' => $sup,
@@ -180,7 +183,7 @@ class ProductController extends Controller
             'brand' => $brand,
             'category' => $category,
             'vars' => $vars,
-            'addImages' => $addImages
+            'addImages' => $addImages,
         ]);
     }
 
@@ -203,7 +206,7 @@ class ProductController extends Controller
 
         $coverImage = $oldImageName = trim($currentProd->cover_image);
         if ($request->hasFile('pro_image')) {
-            $coverImage = Storage::put('images',$request->pro_image);
+            $coverImage = Storage::put('images', $request->pro_image);
             if (!empty($oldImageName) && !Storage::missing($oldImageName)) {
                 Storage::delete($oldImageName);
             }
@@ -218,6 +221,7 @@ class ProductController extends Controller
             'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
             'cover_image' => $coverImage,
+            'sorting' => $request->sorting,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
         ]);
 
@@ -246,12 +250,11 @@ class ProductController extends Controller
         }
 
         //upload additinal images
-        if($request->hasFile('add_image') && count($request->add_image)>0)
-        {
+        if ($request->hasFile('add_image') && count($request->add_image) > 0) {
             foreach ($request->add_image as $key => $file) {
                 ProductImage::create([
                     'product_id' => $id,
-                    'file_name' => Storage::put('images',$file),
+                    'file_name' => Storage::put('images', $file),
                     'display_order' => 1,
                 ]);
             }
@@ -333,8 +336,8 @@ class ProductController extends Controller
     public function removeProImage(Request $request)
     {
         $image = ProductImage::where([
-            ['id','=',$request->variant],
-            ['product_id','=',$request->productId],
+            ['id', '=', $request->variant],
+            ['product_id', '=', $request->productId],
         ])->first();
 
         if (!empty($image->file_name) && !Storage::missing($image->file_name)) {
@@ -349,10 +352,10 @@ class ProductController extends Controller
     public function updateDisplayProImage(Request $request)
     {
         ProductImage::where([
-            ['id','=',$request->variant],
-            ['product_id','=',$request->productId],
+            ['id', '=', $request->variant],
+            ['product_id', '=', $request->productId],
         ])->update([
-            'display_order' => $request->display
+            'display_order' => $request->display,
         ]);
 
         return response()->json(['message' => 'Successfully display order has been updated.']);

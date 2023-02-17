@@ -38,6 +38,10 @@
                         <label class="form-label fw-bolder" for="pro_code">Product Code</label>
                         <input class="form-control" name="pro_code" type="text" placeholder="Enter product code">
                     </div>
+                    <div class="col">
+                        <label class="form-label fw-bolder" for="pro_code">Sorting Order</label>
+                        <input class="form-control" value="{{ $sorting }}" name="sorting" min="0" type="number" placeholder="Enter sorting order">
+                    </div> 
                     
                 </div>
                 <div class="row">

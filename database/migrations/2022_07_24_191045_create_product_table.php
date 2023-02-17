@@ -22,6 +22,7 @@ class CreateProductTable extends Migration
             $table->mediumText('name');
             $table->mediumText('cover_image')->nullable();
             $table->longText('description')->nullable();
+            $table->bigInteger('sorting')->default(0);
             $table->enum('status', ['0', '1', '2'])->default('1');
             $table->timestamps();
         });

@@ -23,9 +23,10 @@
                     <th>PRODUCT NAME</th>
                     <th>CATEGORY</th>
                     <th>IMAGE</th>
-                    <th>VARIANTS</th>
+                    <th class="text-center">VARIANTS</th>
+                    <th class="text-center">SORTING ORDER</th>
                     <th>STATUS</th>
-                    <th width="20%">ACTIONS</th>
+                    <th class="text-center" width="20%">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -41,12 +42,16 @@
             processing: true,
             serverSide: true,
             ajax: "{{ route('admin.products.index') }}",
+            columnDefs: [{ targets: 4, className: 'dt-body-center' },
+                { targets: 5, className: 'dt-body-center' },
+                { targets: 7, className: 'dt-body-center' } ],
             columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex' },
                     { data: 'name', name: 'name' },
                     { data: 'category', name: 'category' },
                     { data: 'image', name: 'image' },
                     { data: 'varants', name: 'varants' },
+                    { data: 'sorting', name: 'sorting' },
                     { data: 'status', name: 'status' },
                     { data: 'actions', name: 'actions' }
                 ]
