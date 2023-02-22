@@ -1120,6 +1120,7 @@ class ApiController extends Controller
 
     public function paymentMethods(Request $request)
     {
+        $payNowData = CommonDatas::select(['id', 'value_1 as image', 'value_2 as name'])->where([['key', '=', 'pay-now-config'], ['status', '=', '1']])->first();
         return returnApiResponse(true, '', [
             [
                 'type' => 'card',
@@ -1128,8 +1129,9 @@ class ApiController extends Controller
             ],
             [
                 'type' => 'pod',
-                'name' => 'Pay On Delivery',
-                'notes' => 'Pay with cash',
+                'name' => 'Pay Now',
+                'notes' => 'Pay Now',
+                'data' => $payNowData
             ],
         ]);
     }
