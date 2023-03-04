@@ -117,6 +117,7 @@ class ProductController extends Controller
             'category_id' => $request->category,
             'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
+            'is_cutoptions_required' => $request->has('cut_option') ? 1 : 0,
             'sorting' => $request->sorting,
             'cover_image' => $coverImage,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
@@ -221,6 +222,7 @@ class ProductController extends Controller
             'brand_id' => !empty($request->brand) ? $request->brand : null,
             'name' => trim($request->pro_name),
             'cover_image' => $coverImage,
+            'is_cutoptions_required' => $request->has('cut_option') ? 1 : 0,
             'sorting' => $request->sorting,
             'description' => !empty($request->pro_desc) ? $request->pro_desc : '',
         ]);

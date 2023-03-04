@@ -9,7 +9,7 @@ use App\Models\Brand;
 
 class Product extends Model
 {
-    protected $fillable = ['user_id','category_id','brand_id','code','name', 'cover_image', 'unit', 'price', 'sorting', 'status','description'];
+    protected $fillable = ['user_id','category_id','brand_id','code','name', 'is_cutoptions_required', 'cover_image', 'unit', 'price', 'sorting', 'status','description'];
 
     public function scopeActiveOnly($query)
     {

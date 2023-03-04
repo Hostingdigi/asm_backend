@@ -66,6 +66,12 @@
                     </div>
                     <div class="col">
                         <br>
+                        <label class="form-label fw-bolder" for="sup">Cut Options</label>
+                        <br>
+                        <input type="checkbox" value="{{$product->is_cutoptions_required}}" @if($product->is_cutoptions_required) checked @endif name="cut_option" > Required
+                    </div>
+                    <div class="col">
+                        <br>
                         <label class="form-label fw-bolder" for="pro_image">Cover Image</label>
                         <input class="" name="pro_image" type="file">
                         @if(!empty($product->cover_image))

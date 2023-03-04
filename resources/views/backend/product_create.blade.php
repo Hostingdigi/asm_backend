@@ -65,7 +65,12 @@
                             @endforeach
                         </select>
                     </div>
-
+                    <div class="col">
+                        <br>
+                        <label class="form-label fw-bolder" for="sup">Cut Options</label>
+                        <br>
+                        <input type="checkbox" value="1" checked name="cut_option" > Required
+                    </div>
                     <div class="col">
                         <br>
                         <label class="form-label fw-bolder" for="pro_image">Main Image</label>
