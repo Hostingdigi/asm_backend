@@ -1079,6 +1079,9 @@ class ApiController extends Controller
         $frequentItems = OrderItem::select('product_id', DB::raw('sum(quantity) as sale_count'))->groupBy('product_id')
             ->orderBy('sale_count', 'desc')
             ->offset($limitCount)
+            ->whereHas('product', function ($q) {
+                $q->where('status', '1');
+            })
             ->limit($paginateCount)
             ->get();
 
@@ -1106,6 +1109,9 @@ class ApiController extends Controller
             ->orderBy('sale_count', 'desc')
             ->offset(($limitCount + $paginateCount))
             ->limit($paginateCount)
+            ->whereHas('product', function ($q) {
+                $q->where('status', '1');
+            })
             ->get()->count();
 
         return returnApiResponse(true, '', [
