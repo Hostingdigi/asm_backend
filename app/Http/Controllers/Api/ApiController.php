@@ -150,7 +150,7 @@ class ApiController extends Controller
         $userId = $request->user_id;
 
         $data = Product::select('id', 'user_id as supplier_id', 'category_id', 'brand_id', 'code', 'name', 'cover_image',
-            'description')->with(['variants' => function ($query) {
+            'description', 'is_cutoptions_required')->with(['variants' => function ($query) {
             $query->select(['id', 'product_id', 'name', 'price', 'unit_id'])->where('status', '1')
                 ->orderBy('price');
         }, 'images' => function ($query) {
@@ -181,6 +181,7 @@ class ApiController extends Controller
 
                 $cart_quantity = !empty($userId) ? Cart::where([['user_id', '=', $userId], ['product_id', '=', $var['product_id']], ['variant_id', '=', $var['id']]])->first() : [];
                 $var['cart_quantity'] = $cart_quantity ? $cart_quantity->quantity : 0;
+                $var['cart_cut_options'] = $cart_quantity ? (!empty($cart_quantity->cut_options) ? unserialize($cart_quantity->cut_options) : null) : null;
 
                 unset($var['product_id']);
                 unset($var['unit_id']);
@@ -307,6 +308,7 @@ class ApiController extends Controller
                 ->where('category_id', $request->category_id)
                 ->offset($limitCount)
                 ->limit($paginateCount)
+                ->orderby('sorting')
                 ->activeOnly();
 
             $data = $data->map(function ($row) use ($userId) {
@@ -1121,17 +1123,23 @@ class ApiController extends Controller
     public function paymentMethods(Request $request)
     {
         $payNowData = CommonDatas::select(['id', 'value_1 as image', 'value_2 as name'])->where([['key', '=', 'pay-now-config'], ['status', '=', '1']])->first();
+        if ($payNowData) {
+            $payNowData->image = url($payNowData->image);
+        }
+
         return returnApiResponse(true, '', [
             [
                 'type' => 'card',
                 'name' => 'Credit Card',
+                'logo' => null,
                 'notes' => '',
             ],
             [
                 'type' => 'pod',
                 'name' => 'Pay Now',
                 'notes' => 'Pay Now',
-                'data' => $payNowData
+                'logo' => url('images/payments/paynow.png'),
+                'data' => $payNowData,
             ],
         ]);
     }

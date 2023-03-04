@@ -179,15 +179,32 @@
                                         <tr>
                                             <th style="border: 1px solid #ccc;">Qty</th>
                                             <th style="border: 1px solid #ccc;">Item Name</th>
+                                            <th style="border: 1px solid #ccc;">Cut Options</th>
                                             <th style="border: 1px solid #ccc;">Price</th>
                                             <th style="border: 1px solid #ccc;">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($order->items as $ik => $item)
+                                            @php
+                                                $cutOptions = [];
+                                                if(!empty($item->product_details)){
+                                                    try{
+                                                        $expandPD = unserialize($item->product_details); 
+                                                        try{
+                                                            $cutOptions = $expandPD['cut_options'] ? unserialize($expandPD['cut_options']) : []; 
+                                                        }catch(Exception $e){
+                                                            $cutOptions = [];
+                                                        }
+                                                    }catch(Exception $e){
+                                                        $cutOptions = [];
+                                                    }
+                                                }
+                                            @endphp
                                         <tr style="border: 1px solid #ccc;">
                                             <td style="border: 1px solid #ccc;">{{ $item->quantity }}</td>
                                             <td style="border: 1px solid #ccc;">{{ $item->product->name }}</td>
+                                            <td style="border: 1px solid #ccc;">{{ implode(',',$cutOptions) }}</td>
                                             <td style="border: 1px solid #ccc;" align="right">${{ $item->price }}</td>
                                             <td style="border: 1px solid #ccc;" align="right">${{ $item->total_price }}</td>
                                         </tr>
