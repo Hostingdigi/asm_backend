@@ -4,6 +4,7 @@ use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\TermsController;
 use Tabuna\Breadcrumbs\Trail;
 use App\Mail\RegisterationMail;
+// use App\Mail\OrderMail;
 use App\Models\Order;
 use App\Domains\Auth\Models\User;
 // use Mail;
@@ -26,8 +27,9 @@ Route::get('test_mail', function () {
 
     // Mail::to('bahadurajm@gmail.com')->later(now()->addSeconds(2), new OrderMail(Order::find(54)));
 
-    return (new RegisterationMail(User::find(2)))->render();
-    // return view('emails.test');
+    // return (new OrderMail(Order::find(38)))->render();
+    // return (new RegisterationMail(User::find(2)))->render();
+    // return view('emails.order');
 
 });
 

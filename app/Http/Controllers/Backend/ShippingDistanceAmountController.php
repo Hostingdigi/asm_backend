@@ -49,7 +49,7 @@ class ShippingDistanceAmountController extends Controller
                         $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.shipping-distance-amount.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
                     }
 
-                    $actions .= '<a title="Update" data-href="' . route('admin.masters.brands.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
+                    $actions .= '<a title="Update" data-href="' . route('admin.settings.shipping-distance-amount.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
                     $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.shipping-distance-amount.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
 
                     return $actions;
@@ -113,7 +113,7 @@ class ShippingDistanceAmountController extends Controller
      */
     public function edit($id)
     {
-        //
+        return response()->json(['data' => ShippingDistAmounts::find($id)]);
     }
 
     /**
@@ -125,7 +125,20 @@ class ShippingDistanceAmountController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        ShippingDistAmounts::where('id', $id)->update([
+            'from_distance' => $request->from_dist,
+            'to_distance' => $request->to_dist,
+            'amount' => $request->ds_amount,
+        ]);
+
+        $this->flashData = [
+            'status' => 1,
+            'message' => 'Successfully data has been updated.',
+        ];
+
+        $request->session()->flash('flashData', $this->flashData);
+
+        return redirect()->route('admin.settings.shipping-distance-amount.index');
     }
 
     /**

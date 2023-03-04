@@ -110,8 +110,12 @@ Route::prefix('settings')->group(function () {
     Route::post('application-data/store-banner', 'Backend\SettingsController@storeBanner')->name('settings.application-data.storeBanner');
     Route::get('application-data/hbanner/update/status/{userId}/{statusCode}', 'Backend\SettingsController@updateStatus')->name('settings.application-data.updateStatus');
 
-    Route::get('shipping-distance-amount', 'Backend\ShippingDistanceAmountController@index')->name('settings.shipping-distance-amount.index');
-    Route::post('shipping-distance-amount-store', 'Backend\ShippingDistanceAmountController@store')->name('settings.shipping-distance-amount.store');
+    Route::resource('shipping-distance-amount', 'Backend\ShippingDistanceAmountController')->names([
+        'index' => 'settings.shipping-distance-amount.index',
+        'store' => 'settings.shipping-distance-amount.store',
+        'edit' => 'settings.shipping-distance-amount.edit',
+        'update' => 'settings.shipping-distance-amount.update',
+    ]);
     Route::get('shipping-distance-amount/update/status/{userId}/{statusCode}', 'Backend\ShippingDistanceAmountController@updateStatus')->name('shipping-distance-amount.updateStatus');
 
 });
