@@ -1,10 +1,13 @@
 @extends('backend.layouts.app')
-@section('title', __('Application Data'))
-
+@section('title', __('Mobile Application'))
+@push('after-styles')
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
+@endpush
 @section('content')
     <x-backend.card>
         <x-slot name="header">
-            Application Data           
+            Mobile Application     
+            @if(request()->tab =='homepage_banner')    
             <div class="modal fade" id="createHomeBanner" tabindex="-1" aria-labelledby="createHomeBanner" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -12,7 +15,7 @@
                             <h5 class="modal-title" id="createHomeBanner">Create New Banner</h5>
                             <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="post" action="{{ route('admin.settings.application-data.storeBanner') }}" id="createHBannerForm" novalidate enctype="multipart/form-data">
+                        <form method="post" action="{{ route('admin.settings.mobile-application.storeBanner') }}" id="createHBannerForm" novalidate enctype="multipart/form-data">
                         <div class="modal-body">
                         {{csrf_field()}}
                             <div class="row">
@@ -97,6 +100,36 @@
                     </div>
                 </div>
             </div> 
+            @endif
+
+            @if(request()->tab =='order_success_notes')
+            <div class="modal fade" id="createOrdSucNote" tabindex="-1" aria-labelledby="createHomeBanner" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createHomeBanner">Update Notes</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" action="{{ route('admin.settings.mobile-application.ord-note-save') }}" novalidate enctype="multipart/form-data">
+                        <div class="modal-body">
+                        {{csrf_field()}}
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="col-form-label">Notes</label>
+                                    <textarea name="ord_note" id="ord_note">{{$successNotes->notes??''}}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success btn-sm" type="submit">UPDATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            @endif
+
         </x-slot>
 
         <x-slot name="body">
@@ -104,19 +137,21 @@
                 <div class="col-12">
                     <ul class="nav nav-tabs" id="myTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">
+                            <a href="?tab=homepage_banner" class="nav-link @if(request()->tab =='homepage_banner') active @endif" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">
                                <strong>Homepage Banner's</strong>
-                            </button>
+                            </a>
                         </li>
-                        <!-- <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="false">Profile</button>
+                         <li class="nav-item" role="presentation">
+                            <a href="?tab=order_success_notes" class="nav-link @if(request()->tab =='order_success_notes') active @endif" id="order-success-tab" data-bs-toggle="tab" data-bs-target="#order-success-tab" type="button" role="tab" aria-controls="order-success-tab" aria-selected="false">
+                                <strong>Order Success Notes</strong>
+                            </a>
                         </li>
-                        <li class="nav-item" role="presentation">
+                        <!--<li class="nav-item" role="presentation">
                             <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab" aria-controls="contact" aria-selected="false">Contact</button>
                         </li> -->
                     </ul>
                     <div class="tab-content" id="myTabContent">
-                        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                        <div class="tab-pane fade @if(request()->tab =='homepage_banner') show active @endif" id="home" role="tabpanel" aria-labelledby="home-tab">
                             <div class="row">
                                 <div class="col-12 p-3">
                                     <a href="#createHomeBanner" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right"> <i class="fa fa-plus"></i> CREATE</a>
@@ -140,8 +175,38 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">... 2</div>
-                        <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">... 3</div> -->
+                        <div class="tab-pane fade @if(request()->tab =='order_success_notes') show active @endif" id="order-success-tab" role="tabpanel" aria-labelledby="order-success-tab">
+                            <div class="row">
+                                <div class="col-12 p-3">
+                                    <a href="#createOrdSucNote" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right"> <i class="fa fa-plus"></i> UPDATE</a>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <table id="hBannerTable2" class="table table-bordered table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                            <th>#</th>
+                                            <th>CONTENT</th>
+                                            <th>STATUS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>1</td>
+                                                <td>
+                                                    <div>    
+                                                        {!! $successNotes->notes ?? '1' !!}
+                                                    </div>
+                                                </td>
+                                                <td><b class="text-success">ACTIVE</b></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">... 3</div> -->
                     </div>
                 </div>
             </div>
@@ -150,8 +215,12 @@
 @endsection
 
 @push('after-scripts')
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
+
 <script>
     $(document).ready( function () {
+
+        @if(request()->tab=='homepage_banner')
 
         $("body").on("click", ".editRow", function(e)
         {
@@ -161,7 +230,7 @@
                 dataType : 'JSON',
                 success: function(result)
                 {
-                    $("#editHomePageForm").attr('action',"{{ route('admin.settings.application-data.update') }}");
+                    $("#editHomePageForm").attr('action',"{{ route('admin.settings.mobile-application.update') }}");
                     $("#red_screen").val(result['data']['red_screen']);
                     var htmlContent = '<option value="">--select--</option>';
                     if((result.data.resourceList).length){
@@ -185,7 +254,7 @@
             if(optionValue.length>0){
                 $.ajax({
                     type : 'POST',
-                    url : "{{ route('admin.settings.application-data.getResource') }}",
+                    url : "{{ route('admin.settings.mobile-application.getResource') }}",
                     dataType : 'JSON',
                     data : {screen:optionValue,_token:"{{ csrf_token() }}"},
                     success: function(result)
@@ -205,7 +274,7 @@
         $('#hBannerTable').DataTable({
             processing: true,
             serverSide: true,
-            ajax: "{{ route('admin.settings.application-data',['type' => 'home-banners']) }}",
+            ajax: "{{ route('admin.settings.mobile-application',['type' => 'home-banners']) }}",
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },
                 { data: 'image', name: 'image' },
@@ -215,6 +284,13 @@
                 { data: 'actions', name: 'actions' }
             ]
         });
+
+        @endif
+
+        @if(request()->tab=='order_success_notes')
+            $("#ord_note").summernote();
+        @endif
+
     });
 </script>
 @endpush

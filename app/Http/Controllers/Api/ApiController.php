@@ -465,14 +465,23 @@ class ApiController extends Controller
         ])->first();
 
         if ($isExists) {
-            Cart::where([
-                ['user_id', '=', auth()->id()],
-                ['id', '=', $request->cart_id],
-            ])->delete();
+            $isExists->delete();
+            // Cart::where([
+            //     ['user_id', '=', auth()->id()],
+            //     ['id', '=', $request->cart_id],
+            // ])->delete();
         }
 
         if (count($this->cartServices->listItems()) == 0) {
-            CartCoupon::where('user_id', auth()->id())->delete();
+            $userCartCoupon = CartCoupon::where([['user_id', '=', auth()->id()], ['status', '=', '1']])->count();
+            $cartCoupon = CartCoupon::where('user_id', auth()->id())->first();
+            $removeCoupon = 1;
+            if ($userCartCoupon == 1 && $cartCoupon->coupon->nature == 'referral') {
+                if ($cartCoupon->coupon->referral && $cartCoupon->coupon->referral->child_user == auth()->id()) {
+                    $removeCoupon = 0;
+                }
+            }
+            if ($removeCoupon) {CartCoupon::where('user_id', auth()->id())->delete();}
         }
 
         return returnApiResponse($isExists ? true : false, $isExists ? 'Item removed!' : 'Item is not found.', $isExists ? $this->cartServices->listItems() : null);
@@ -694,6 +703,18 @@ class ApiController extends Controller
             return returnApiResponse(false, 'Cart is empty');
         }
 
+        //check preferred delivery date validation
+        $dayAdditional = env('DELIVERY_DATE_PERIOD','');
+        if(!empty($dayAdditional)){
+            $dayAcceptFrom = date('Y-m-d',strtotime('+'.$dayAdditional.' days'));
+
+            if($request->has('preferred_delivery_date') && !empty($request->preferred_delivery_date)){
+                if($request->preferred_delivery_date < $dayAcceptFrom){
+                    return returnApiResponse(false, 'Preferred delivery can accept from '.date('d/m/Y',strtotime($dayAcceptFrom)));
+                }
+            }
+        }
+        
         if ($request->payment_mode == 'card') {
             $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();
 
@@ -740,24 +761,13 @@ class ApiController extends Controller
 
         $cartData = $this->cartServices->listItems();
 
-        // if ($request->payment_mode == 'card') {
-
-        //     $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
-
-        //     if (!$stripeConfig) {
-        //         return returnApiResponse(false, 'Stripe configuation is not available');
-        //     }
-        // }
-
         $cartAmount = $taxAmount = $totalAmount = $shippingAmount = $couponAmount = $orderNo = 0;
         list($couponCode, $billingDetails, $shippingDetails, $orderItems) = [[], [], [], []];
 
         $shippingDetails = CartAddress::where([['user_id', '=', auth()->id()], ['id', '=', $request->address_id]])
             ->select($cartAddress->addressFields())->first();
 
-        if (empty($shippingDetails)) {
-            return returnApiResponse(false, 'Shipping address is empty');
-        }
+        if (empty($shippingDetails)) { return returnApiResponse(false, 'Shipping address is empty'); }
 
         $shippingDetails = $shippingDetails->toArray();
 
@@ -832,6 +842,11 @@ class ApiController extends Controller
                 'status' => 3,
             ]);
 
+            //update coupon
+            if(!empty($couponCode)){
+                
+            }
+
             //Update payment
             $sent_response = [];
             $payment = Payment::create([
@@ -849,23 +864,6 @@ class ApiController extends Controller
                 }
             });
             OrderItem::insert($orderItems);
-
-            //create stripe
-            // if ($request->payment_mode == 'card') {
-            //     $stripeResults = $this->paymentServices->createStripePaymentIntend($order->id, $payment->id);
-
-            //     if ($stripeResults[0] == false) {
-            //         return returnApiResponse(false, $stripeResults[1], $stripeResults[2] ?? null);
-            //     }
-
-            //     //Clear cart items
-            //     Cart::where('user_id', auth()->id())->delete();
-
-            //     return returnApiResponse(true, 'Order created!', [
-            //         'order_id ' => $order->id,
-            //         'stripe_details' => $stripeResults[2] ?? null,
-            //     ]);
-            // }
 
             //Clear cart items
             $this->cartServices->clearUserCart();
@@ -886,10 +884,13 @@ class ApiController extends Controller
             // send mail;
             $this->appMailService->sendMail('orderMail', ['toAddress' => auth()->user()->email], Order::find($order->id));
 
+            $successNotes = CommonDatas::select(['id', 'value_1 as notes'])->where([['key', '=', 'success_notes'], ['value_1', '!=', ''], ['status', '=', '1']])->first();
+
             return returnApiResponse(true, 'Order created!', [
                 'order_id ' => $order->id,
                 'payment_status' => 0,
                 'payment_mode' => 'pod',
+                'success_notes' => $successNotes ? $successNotes->notes : null
             ]);
         }
 
@@ -1319,8 +1320,8 @@ class ApiController extends Controller
         $referralCode = User::find(auth()->id())->referral_code;
         $devicePlatform = empty($request->device_platform) ? 'android' : trim($request->device_platform);
         $data = [
-            'referral_user_amount' => $referralDiscountDetails->value_2 ?? 0,
-            'user_amount' => $referralDiscountDetails->value_3 ?? 0,
+            'referral_user_amount' => $referralDiscountDetails->value_2 ?? 0, //child user
+            'user_amount' => $referralDiscountDetails->value_3 ?? 0, //parent user
             'referral_code' => $referralCode,
             'app_image' => $appShareImage,
             'url' => route('frontend.referral-by', ['device_platform' => $devicePlatform, 'referral_code' => $referralCode]),

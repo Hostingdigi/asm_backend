@@ -14,7 +14,19 @@ class CartServices
 
     public function clearUserCart()
     {
-        CartCoupon::where('user_id', auth()->id())->delete();
+        $userCartCoupon = CartCoupon::where('user_id', auth()->id())->first();
+        if ($userCartCoupon) {
+            CartCoupon::where('user_id', auth()->id())->delete();
+            if ($userCartCoupon->coupon->nature == 'referral') {
+                if ($userCartCoupon->coupon->referral && $userCartCoupon->coupon->referral->child_user == auth()->id()) {
+                    Coupon::where([['user_id', '=', $userCartCoupon->coupon->referral->parent_user],
+                        ['referral_id', '=', $userCartCoupon->coupon->referral->id]])->update([
+                        'status' => '1',
+                    ]);
+                }
+            }
+            Coupon::where([['user_id', '=', auth()->id()], ['id', '=', $userCartCoupon->coupon_id]])->delete();
+        }
         Cart::where('user_id', auth()->id())->delete();
     }
 
@@ -51,13 +63,14 @@ class CartServices
         $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity', 'cut_options'])->where('user_id', auth()->id())
             ->with(['product' => function ($query) {
                 $query->select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
-                    $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])->with(['unit:id,name']);
+                    $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])
+                        ->where('status', '1')->with(['unit:id,name']);
                 }]);
             }])->latest()->get();
 
         $cartItems->map(function ($row) {
 
-            $row->product->cover_image = str_replace(asset('storage').'/'.asset('storage').'/',asset('storage/').'/',$row->product->formatedcoverimageurl);
+            $row->product->cover_image = str_replace(asset('storage') . '/' . asset('storage') . '/', asset('storage/') . '/', $row->product->formatedcoverimageurl);
             $row->price = $row->variant->price * $row->quantity;
             $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
             $row->unit_id = $row->variant->unit_id;
@@ -97,17 +110,19 @@ class CartServices
     {
         $discountAmount = 0;
         $couponDetails = null;
-        $currentCoupon = CartCoupon::select(['id', 'coupon_id'])->where([
-            ['user_id', '=', auth()->id()],
-            ['status', '=', '1'],
-        ])->first();
-        if ($currentCoupon) {
-            $couponDetails = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'description'])->find($currentCoupon->coupon_id);
+        if ($data['cartTotal'] > 0) {
+            $currentCoupon = CartCoupon::select(['id', 'coupon_id'])->where([
+                ['user_id', '=', auth()->id()],
+                ['status', '=', '1'],
+            ])->first();
+            if ($currentCoupon) {
+                $couponDetails = Coupon::select(['id', 'title', 'code', 'offer_value', 'coupon_type', 'image', 'description'])->find($currentCoupon->coupon_id);
 
-            if ($couponDetails) {
-                $couponDetails->image = $couponDetails->formatedimageurl;
-                $discountAmount = ($couponDetails->coupon_type == 'percentage') ? (($data['cartTotal'] * $couponDetails->offer_value) / 100) :
-                $couponDetails->offer_value;
+                if ($couponDetails) {
+                    $couponDetails->image = $couponDetails->formatedimageurl;
+                    $discountAmount = ($couponDetails->coupon_type == 'percentage') ? (($data['cartTotal'] * $couponDetails->offer_value) / 100) :
+                    $couponDetails->offer_value;
+                }
             }
         }
         return [

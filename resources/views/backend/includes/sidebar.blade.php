@@ -163,7 +163,7 @@
             </li>
         @endif
 
-        <li class="c-sidebar-nav-dropdown {{ activeClass(Route::is('admin.settings'), 'c-open c-show') }}">
+        <li class="c-sidebar-nav-dropdown {{ activeClass(Route::is('admin.settings.*'), 'c-open c-show') }}">
                 <x-utils.link
                     href="#"
                     icon="c-sidebar-nav-icon cil-cog"
@@ -174,10 +174,10 @@
                     
                     <li class="c-sidebar-nav-item">
                         <x-utils.link
-                            :href="route('admin.settings.application-data')"
+                            :href="route('admin.settings.mobile-application',['tab'=>'homepage_banner'])"
                             class="c-sidebar-nav-link"
-                            :text="__('Application Data')"
-                            :active="activeClass(Route::is('admin.settings.application-data'), 'c-active')" />
+                            :text="__('Mobile Application')"
+                            :active="activeClass(Route::is('admin.settings.mobile-application'), 'c-active')" />
                     </li>
 
                     <li class="c-sidebar-nav-item">

@@ -3,7 +3,6 @@
 use App\Http\Controllers\Backend\DashboardController;
 use Tabuna\Breadcrumbs\Trail;
 
-
 Route::get('run_artisan', function () {
     // \Artisan::call('cache:clear');
     \Artisan::call('storage:link');
@@ -103,12 +102,15 @@ Route::prefix('settings')->group(function () {
     Route::post('delivery-date/remove-day', 'Backend\DeliveryDateController@removeDay')->name('settings.delivery-date.removeDay');
     Route::post('delivery-date/save-date', 'Backend\DeliveryDateController@saveDate')->name('settings.delivery-date.saveDate');
 
-    Route::get('application-data', 'Backend\SettingsController@index')->name('settings.application-data');
-    Route::get('application-data/edit/{rowId}', 'Backend\SettingsController@editData')->name('settings.application-data.edit');
-    Route::post('application-data/update', 'Backend\SettingsController@updateData')->name('settings.application-data.update');
-    Route::post('application-data/get-resource', 'Backend\SettingsController@getResource')->name('settings.application-data.getResource');
-    Route::post('application-data/store-banner', 'Backend\SettingsController@storeBanner')->name('settings.application-data.storeBanner');
-    Route::get('application-data/hbanner/update/status/{userId}/{statusCode}', 'Backend\SettingsController@updateStatus')->name('settings.application-data.updateStatus');
+    Route::get('mobile-application', 'Backend\SettingsController@index')->name('settings.mobile-application');
+    Route::get('mobile-application/edit/{rowId}', 'Backend\SettingsController@editData')->name('settings.mobile-application.edit');
+    Route::post('mobile-application/update', 'Backend\SettingsController@updateData')->name('settings.mobile-application.update');
+    Route::post('mobile-application/get-resource', 'Backend\SettingsController@getResource')->name('settings.mobile-application.getResource');
+    Route::post('mobile-application/store-banner', 'Backend\SettingsController@storeBanner')->name('settings.mobile-application.storeBanner');
+    Route::get('mobile-application/hbanner/update/status/{userId}/{statusCode}', 'Backend\SettingsController@updateStatus')->name('settings.mobile-application.updateStatus');
+
+    //
+    Route::post('mobile-application/order-notes-save', 'Backend\SettingsController@orderNotesSave')->name('settings.mobile-application.ord-note-save');
 
     Route::resource('shipping-distance-amount', 'Backend\ShippingDistanceAmountController')->names([
         'index' => 'settings.shipping-distance-amount.index',

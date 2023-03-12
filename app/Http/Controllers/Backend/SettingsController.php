@@ -19,8 +19,13 @@ class SettingsController extends Controller
 
     public function index(Request $request)
     {
+
+        if (!$request->has('tab')) {
+            return redirect()->route('admin.settings.mobile-application', ['tab' => 'homepage_banner']);
+        }
+
         if ($request->ajax()) {
-            $users = CommonDatas::select(['id', 'value_1', 'value_2', 'value_3', 'status'])->where('key','app-homepage-banner')
+            $users = CommonDatas::select(['id', 'value_1', 'value_2', 'value_3', 'status'])->where('key', 'app-homepage-banner')
                 ->orderBy('value_4', 'asc')->bothInActive();
 
             return Datatables::of($users)
@@ -33,7 +38,7 @@ class SettingsController extends Controller
                 })
                 ->addColumn('resource', function ($row) {
                     if (!empty($row->value_2) && !empty($row->value_3)) {
-                        $data = $this->getResourceData($row->value_2,['id' => $row->value_3]);
+                        $data = $this->getResourceData($row->value_2, ['id' => $row->value_3]);
                     }
                     return $data[0]['name'] ?? '';
                 })
@@ -47,13 +52,13 @@ class SettingsController extends Controller
                 })
                 ->addColumn('actions', function ($row) {
                     if ($row->status == '1') {
-                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.settings.application-data.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Lock" class="btn btn-outline-dark changeStatus" data-rowurl="' . route('admin.settings.mobile-application.updateStatus', [$row->id, 0]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-lock"></i></a> ';
                     } else if ($row->status == 0) {
-                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.settings.application-data.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
+                        $actions = '<a href="javascript:void(0);" title="Unlock" class="btn btn-outline-success changeStatus" data-rowurl="' . route('admin.settings.mobile-application.updateStatus', [$row->id, 1]) . '" data-row="' . $row->id . '"><i class="fa fa-fw fa-unlock-alt"></i></a> ';
                     }
 
-                    $actions .= '<a title="Update" data-href="' . route('admin.settings.application-data.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
-                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.settings.application-data.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
+                    $actions .= '<a title="Update" data-href="' . route('admin.settings.mobile-application.edit', $row->id) . '" href="javascript:void(0)" class="btn btn-outline-info editRow"><i class="fa fa-fw fa-edit"></i></a> ';
+                    $actions .= ' <a title="Delete" href="javascript:void(0);" data-rowurl="' . route('admin.settings.mobile-application.updateStatus', [$row->id, 2]) . '" data-row="' . $row->id . '" class="btn removeRow btn-outline-danger"><i class="fa fa-fw fa-trash"></i></a>';
 
                     return $actions;
                 })
@@ -61,7 +66,11 @@ class SettingsController extends Controller
                 ->make(true);
         }
 
-        return view('backend.settings');
+        $successNotes = null;
+        if ($request->tab == 'order_success_notes') {
+            $successNotes = CommonDatas::select(['id', 'value_1 as notes'])->where([['key', '=', 'success_notes'], ['status', '=', '1']])->first();
+        }
+        return view('backend.settings', compact('successNotes'));
     }
 
     public function storeBanner(Request $request)
@@ -80,13 +89,13 @@ class SettingsController extends Controller
             'message' => 'Successfully data has been created.',
         ];
         $request->session()->flash('flashData', $this->flashData);
-        return redirect()->route('admin.settings.application-data');
+        return redirect()->route('admin.settings.mobile-application');
     }
 
     public function getResourceData($screen, $resourceId = null)
     {
         $selectData = ['id', 'name'];
-        $resourceId = $resourceId ?? [['id','!=',null]];
+        $resourceId = $resourceId ?? [['id', '!=', null]];
         switch ($screen) {
             case 'category':
                 $data = Category::select($selectData)->where($resourceId)->activeOnly();
@@ -114,7 +123,7 @@ class SettingsController extends Controller
 
     public function editData(Request $request, $rowId)
     {
-        $data = CommonDatas::select(['id', 'value_1 as image', 'value_2 as red_screen','value_3 as resource','value_4 as sorting'])->find($rowId);
+        $data = CommonDatas::select(['id', 'value_1 as image', 'value_2 as red_screen', 'value_3 as resource', 'value_4 as sorting'])->find($rowId);
         if ($data) {
             $data->image = Storage::url($data->image);
             $data->resourceList = $this->getResourceData($data->red_screen);
@@ -129,7 +138,7 @@ class SettingsController extends Controller
     {
         $data = CommonDatas::find($request->updId);
         $imageName = $request->has('banner_image') ? Storage::put('images', $request->banner_image) : $data->value_1;
-        CommonDatas::where('id',$request->updId)->update([
+        CommonDatas::where('id', $request->updId)->update([
             'value_1' => $imageName,
             'value_2' => !empty($request->red_screen) ? $request->red_screen : null,
             'value_3' => !empty($request->resource) ? $request->resource : null,
@@ -141,7 +150,7 @@ class SettingsController extends Controller
             'message' => 'Successfully data has been updated.',
         ];
         $request->session()->flash('flashData', $this->flashData);
-        return redirect()->route('admin.settings.application-data');
+        return redirect()->route('admin.settings.mobile-application');
     }
 
     public function updateStatus(Request $request, $userId, $statusCode)
@@ -163,5 +172,17 @@ class SettingsController extends Controller
         return response()->json([
             'status' => 1,
         ]);
+    }
+
+    public function orderNotesSave(Request $request)
+    {
+        CommonDatas::updateOrCreate([['key', '=', 'success_notes'], ['status', '=', '1']], ['value_1' => $request->ord_note, 'key' => 'success_notes']);
+        $this->flashData = [
+            'status' => 1,
+            'message' => 'Successfully data has been updated.',
+        ];
+        $request->session()->flash('flashData', $this->flashData);
+        return redirect()->route('admin.settings.mobile-application', ['tab' => 'order_success_notes']);
+
     }
 }
