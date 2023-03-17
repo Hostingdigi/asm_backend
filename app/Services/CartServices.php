@@ -62,7 +62,7 @@ class CartServices
         $cartTotal = 0;
         $cartItems = Cart::select(['id as cart_id', 'product_id', 'variant_id', 'quantity', 'cut_options'])->where('user_id', auth()->id())
             ->with(['product' => function ($query) {
-                $query->select(['id', 'name', 'cover_image'])->with(['variants' => function ($query) {
+                $query->select(['id', 'name', 'cover_image', 'is_cutoptions_required'])->with(['variants' => function ($query) {
                     $query->select(['id', 'product_id', 'name', 'unit_id', 'price'])
                         ->where('status', '1')->with(['unit:id,name']);
                 }]);
@@ -75,7 +75,13 @@ class CartServices
             $row->formatted_price = number_format($row->variant->price * $row->quantity, 2);
             $row->unit_id = $row->variant->unit_id;
             $row->unit_name = $row->variant->name . $row->variant->unit->name;
-            $row->cut_options = !empty($row->cut_options) ? unserialize($row->cut_options) : null;
+
+            if ($row->product->is_cutoptions_required) {
+                $row->cut_options = !empty($row->cut_options) ? unserialize($row->cut_options) : null;
+            } else {
+                Cart::where('product_id', $row->product->id)->update(['cut_options' => null]);
+                $row->cut_options = null;
+            }
 
             unset($row->variant);
             return $row;

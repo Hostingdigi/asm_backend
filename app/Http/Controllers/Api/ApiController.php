@@ -176,12 +176,17 @@ class ApiController extends Controller
                 return $img;
             });
 
-            $data->variants = $data->variants->map(function ($var) use ($userId) {
+            $data->variants = $data->variants->map(function ($var) use ($userId, $data) {
                 $var['name'] = $var->name . ' ' . $var->unit->name;
 
                 $cart_quantity = !empty($userId) ? Cart::where([['user_id', '=', $userId], ['product_id', '=', $var['product_id']], ['variant_id', '=', $var['id']]])->first() : [];
                 $var['cart_quantity'] = $cart_quantity ? $cart_quantity->quantity : 0;
-                $var['cart_cut_options'] = $cart_quantity ? (!empty($cart_quantity->cut_options) ? unserialize($cart_quantity->cut_options) : null) : null;
+                if ($data->is_cutoptions_required) {
+                    $var['cart_cut_options'] = $cart_quantity ? (!empty($cart_quantity->cut_options) ? unserialize($cart_quantity->cut_options) : null) : null;
+                } else {
+                    Cart::where([['product_id', '=', $var['product_id']]])->update(['cut_options' => null]);
+                    $var['cart_cut_options'] = null;
+                }
 
                 unset($var['product_id']);
                 unset($var['unit_id']);
@@ -189,9 +194,11 @@ class ApiController extends Controller
                 return $var;
             });
 
-            $packageOptions = !empty($data->category->cut_options) ? unserialize($data->category->cut_options) : null;
-            $data->cut_options = !empty($packageOptions) ? $packageOptions : null;
-
+            $data->cut_options = null;
+            if ($data->is_cutoptions_required) {
+                $packageOptions = !empty($data->category->cut_options) ? unserialize($data->category->cut_options) : null;
+                $data->cut_options = !empty($packageOptions) ? $packageOptions : null;
+            }
             unset($data->supplier);
             unset($data->category);
         }
@@ -704,17 +711,17 @@ class ApiController extends Controller
         }
 
         //check preferred delivery date validation
-        $dayAdditional = env('DELIVERY_DATE_PERIOD','');
-        if(!empty($dayAdditional)){
-            $dayAcceptFrom = date('Y-m-d',strtotime('+'.$dayAdditional.' days'));
+        $dayAdditional = env('DELIVERY_DATE_PERIOD', '');
+        if (!empty($dayAdditional)) {
+            $dayAcceptFrom = date('Y-m-d', strtotime('+' . $dayAdditional . ' days'));
 
-            if($request->has('preferred_delivery_date') && !empty($request->preferred_delivery_date)){
-                if($request->preferred_delivery_date < $dayAcceptFrom){
-                    return returnApiResponse(false, 'Preferred delivery can accept from '.date('d/m/Y',strtotime($dayAcceptFrom)));
+            if ($request->has('preferred_delivery_date') && !empty($request->preferred_delivery_date)) {
+                if ($request->preferred_delivery_date < $dayAcceptFrom) {
+                    return returnApiResponse(false, 'Preferred delivery can accept from ' . date('d/m/Y', strtotime($dayAcceptFrom)));
                 }
             }
         }
-        
+
         if ($request->payment_mode == 'card') {
             $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();
 
@@ -767,7 +774,7 @@ class ApiController extends Controller
         $shippingDetails = CartAddress::where([['user_id', '=', auth()->id()], ['id', '=', $request->address_id]])
             ->select($cartAddress->addressFields())->first();
 
-        if (empty($shippingDetails)) { return returnApiResponse(false, 'Shipping address is empty'); }
+        if (empty($shippingDetails)) {return returnApiResponse(false, 'Shipping address is empty');}
 
         $shippingDetails = $shippingDetails->toArray();
 
@@ -843,8 +850,8 @@ class ApiController extends Controller
             ]);
 
             //update coupon
-            if(!empty($couponCode)){
-                
+            if (!empty($couponCode)) {
+
             }
 
             //Update payment
@@ -890,7 +897,7 @@ class ApiController extends Controller
                 'order_id ' => $order->id,
                 'payment_status' => 0,
                 'payment_mode' => 'pod',
-                'success_notes' => $successNotes ? $successNotes->notes : null
+                'success_notes' => $successNotes ? $successNotes->notes : null,
             ]);
         }
 
