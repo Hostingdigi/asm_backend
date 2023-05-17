@@ -143,6 +143,9 @@ class ApiAuthController extends Controller
             return returnApiResponse(false, 'User does not exist');
         }
 
+        //If user is active
+        if ($user->active==0) return returnApiResponse(false, 'Your account has been deleted. contact administrator.');
+
         //If user password is not match
         if (!Hash::check($request->password, $user->password)) {
             return returnApiResponse(false, 'Password mismatch');
@@ -373,5 +376,13 @@ class ApiAuthController extends Controller
         ]);
 
         return returnApiResponse(true, 'Successfully password has been updated');
+    }
+
+    public function userDelete(Request $request)
+    {
+        auth()->user()->update(['active' => 0]);
+        $token = $request->user()->token();
+        $token->revoke();
+        return returnApiResponse(true, 'Successfully account has been deleted');
     }
 }

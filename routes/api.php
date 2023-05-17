@@ -75,6 +75,7 @@ Route::group(['middleware' => ['json.response']], function () {
         Route::post('order/update-card-payment-status', [ApiController::class, 'updatecardStatus']);
 
         Route::post('user/profile-update', [ApiAuthController::class, 'profileUpdate']);
+        Route::post('user/delete', [ApiAuthController::class, 'userDelete']);
 
         //Cart
         Route::prefix('cart')->group(function () {
