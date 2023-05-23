@@ -109,7 +109,14 @@ Route::prefix('settings')->group(function () {
     Route::post('mobile-application/store-banner', 'Backend\SettingsController@storeBanner')->name('settings.mobile-application.storeBanner');
     Route::get('mobile-application/hbanner/update/status/{userId}/{statusCode}', 'Backend\SettingsController@updateStatus')->name('settings.mobile-application.updateStatus');
 
-    //
+    Route::resource('mobile-application/dynamic-pages', 'Backend\DynamicPagesController')->names([
+        'index' => 'settings.mobile-application.dynamicPages.index',
+        'store' => 'settings.mobile-application.dynamicPages.store',
+        'edit' => 'settings.mobile-application.dynamicPages.edit',
+        'update' => 'settings.mobile-application.dynamicPages.update',
+    ]);
+    Route::get('mobile-application/dynamic-pages/update/status/{userId}/{statusCode}', 'Backend\DynamicPagesController@updateStatus')->name('settings.mobile-application.dynamicPages.updateStatus');
+
     Route::post('mobile-application/order-notes-save', 'Backend\SettingsController@orderNotesSave')->name('settings.mobile-application.ord-note-save');
 
     Route::resource('shipping-distance-amount', 'Backend\ShippingDistanceAmountController')->names([

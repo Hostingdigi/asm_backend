@@ -130,6 +130,74 @@
             </div>
             @endif
 
+            @if(request()->tab =='dynamic_pages')
+            <div class="modal fade" id="createDynamicPages" tabindex="-1" aria-labelledby="createDynamicPages" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Create Dynamic Page</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" id="createDynamicPagesForm" action="{{ route('admin.settings.mobile-application.dynamicPages.store') }}" novalidate enctype="multipart/form-data">
+                        <div class="modal-body">
+                        {{csrf_field()}}
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="col-form-label">Title <sup class="required">*</sup></label>
+                                    <input type="text" required class="form-control" name="title" placeholder="Enter the title">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="col-form-label">Content</label>
+                                    <textarea name="dynamic_cnt" id="dynamic_cnt"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="editDynamicPages" tabindex="-1" aria-labelledby="editDynamicPages" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Create Dynamic Page</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" id="editDynamicPagesForm" action="" novalidate enctype="multipart/form-data">
+                        <div class="modal-body">
+                        <input type="hidden" id="updId" name="updId">
+            @method('PUT')
+                        {{csrf_field()}}
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="col-form-label">Title <sup class="required">*</sup></label>
+                                    <input type="text" required class="form-control" name="title" id="etitle" placeholder="Enter the title">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label class="col-form-label">Content</label>
+                                    <textarea name="dynamic_cnt" id="edynamic_cnt"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            @endif
+
         </x-slot>
 
         <x-slot name="body">
@@ -141,9 +209,14 @@
                                <strong>Homepage Banner's</strong>
                             </a>
                         </li>
-                         <li class="nav-item" role="presentation">
+                        <li class="nav-item" role="presentation">
                             <a href="?tab=order_success_notes" class="nav-link @if(request()->tab =='order_success_notes') active @endif" id="order-success-tab" data-bs-toggle="tab" data-bs-target="#order-success-tab" type="button" role="tab" aria-controls="order-success-tab" aria-selected="false">
                                 <strong>Order Success Notes</strong>
+                            </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a href="?tab=dynamic_pages" class="nav-link @if(request()->tab =='dynamic_pages') active @endif" id="dynamic_pages-tab" data-bs-toggle="tab" data-bs-target="#dynamic_pages-tab" type="button" role="tab" aria-controls="dynamic_pages-tab" aria-selected="false">
+                                <strong>Dynamic Pages</strong>
                             </a>
                         </li>
                         <!--<li class="nav-item" role="presentation">
@@ -206,6 +279,29 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane fade @if(request()->tab =='dynamic_pages') show active @endif" id="dynamic_pages-tab" role="tabpanel" aria-labelledby="dynamic_pages-tab">
+                            <div class="row">
+                                <div class="col-12 p-3">
+                                    <a href="#createDynamicPages" data-coreui-toggle="modal" class="btn btn-success btn-sm float-right"> <i class="fa fa-plus"></i> CREATE</a>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <table id="Table3" class="table table-bordered table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                            <th>#</th>
+                                            <th>KEY</th>
+                                            <th>TITLE</th>
+                                            <th>CONTENT</th>
+                                            <th>ACTIONS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                         <!-- <div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">... 3</div> -->
                     </div>
                 </div>
@@ -219,6 +315,8 @@
 
 <script>
     $(document).ready( function () {
+
+        $("#createHBannerForm, #createDynamicPagesForm").validate({...validationOptions});
 
         @if(request()->tab=='homepage_banner')
 
@@ -245,8 +343,6 @@
                 }
             });
         });
-
-        $("#createHBannerForm").validate({...validationOptions});
 
         var createResource = "select[name='resource']";
         $("select[name='red_screen']").on('change', function(e){
@@ -289,6 +385,43 @@
 
         @if(request()->tab=='order_success_notes')
             $("#ord_note").summernote();
+        @endif
+
+        @if(request()->tab=='dynamic_pages')
+            $("#dynamic_cnt").summernote();
+        
+            $('#Table3').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: "{{ route('admin.settings.mobile-application.dynamicPages.index') }}",
+                columns: [
+                        { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+                        { data: 'key', name: 'key' },
+                        { data: 'title', name: 'title' },
+                        { data: 'content', name: 'content' },
+                        { data: 'actions', name: 'actions' }
+                    ]
+            });
+
+            $("body").on("click", ".editRow", function(e)
+            {
+                $.ajax({
+                    type : 'GET',
+                    url : $(this).data('href'),
+                    dataType : 'JSON',
+                    success: function(result)
+                    {
+                        $("#edynamic_cnt").summernote('destroy');
+                        $("#editDynamicPagesForm").attr('action',result['url']);
+                        $("#etitle").val(result['data']['value_3']);
+                        $("#edynamic_cnt").val(result['data']['value_1']);
+                        $("#edynamic_cnt").summernote();
+                        $("#updId").val(result.data.id);
+                        $("#editDynamicPages").modal("show");
+                    }
+                });
+            });
+
         @endif
 
     });
