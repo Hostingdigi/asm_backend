@@ -31,7 +31,7 @@ class DynamicPagesController extends Controller
                     return ucwords($row->value_3);
                 })
                 ->addColumn('content', function ($row) {
-                    return '<a class="btn btn-sm btn-info text-white" data-tagret="">View</a>';
+                    return '<a title="View" data-href="' . route('admin.settings.mobile-application.dynamicPages.show', $row->id) . '" href="javascript:void(0)" class="btn btn-sm btn-info text-white showCnt" data-tagret="">View</a>';
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == '1') {
@@ -105,7 +105,11 @@ class DynamicPagesController extends Controller
      */
     public function show($id)
     {
-        //
+        return response()->json([
+            'data' => [
+                'cnt' => CommonDatas::find($id)->value_1
+            ]
+        ]);
     }
 
     /**

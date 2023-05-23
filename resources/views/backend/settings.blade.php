@@ -173,7 +173,7 @@
                         <form method="post" id="editDynamicPagesForm" action="" novalidate enctype="multipart/form-data">
                         <div class="modal-body">
                         <input type="hidden" id="updId" name="updId">
-            @method('PUT')
+                        @method('PUT')
                         {{csrf_field()}}
                             <div class="row">
                                 <div class="col-12">
@@ -193,6 +193,23 @@
                             <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
                         </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="showCnt" tabindex="-1" aria-labelledby="showCnt" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Content</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-12" id="showCntDiv">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -418,6 +435,20 @@
                         $("#edynamic_cnt").summernote();
                         $("#updId").val(result.data.id);
                         $("#editDynamicPages").modal("show");
+                    }
+                });
+            });
+
+            $("body").on("click", ".showCnt", function(e)
+            {
+                $.ajax({
+                    type : 'GET',
+                    url : $(this).data('href'),
+                    dataType : 'JSON',
+                    success: function(result)
+                    {
+                        $("#showCntDiv").html(result['data']['cnt']);
+                        $("#showCnt").modal("show");
                     }
                 });
             });

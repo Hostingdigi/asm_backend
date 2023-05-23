@@ -111,6 +111,7 @@ Route::prefix('settings')->group(function () {
 
     Route::resource('mobile-application/dynamic-pages', 'Backend\DynamicPagesController')->names([
         'index' => 'settings.mobile-application.dynamicPages.index',
+        'show' => 'settings.mobile-application.dynamicPages.show',
         'store' => 'settings.mobile-application.dynamicPages.store',
         'edit' => 'settings.mobile-application.dynamicPages.edit',
         'update' => 'settings.mobile-application.dynamicPages.update',
