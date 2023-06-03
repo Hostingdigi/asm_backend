@@ -59,7 +59,7 @@ class ApiController extends Controller
 
     public function pCheck(Request $request)
     {
-        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first();
+        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE','test')], ['status', '=', '1']])->first();
         if (!$stripeConfig) {
             return returnApiResponse(false, 'Stripe configuation is not available');
         }

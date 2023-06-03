@@ -18,7 +18,7 @@ class PaymentServices
 
     public function createSripeCustomer($userId)
     {
-        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first() 
+        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE','test')], ['status', '=', '1']])->first() 
             : null;
 
         if (!$stripeConfig) {
@@ -55,7 +55,7 @@ class PaymentServices
 
     public function createStripePaymentIntend($orderId, $paymentId)
     {
-        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first() 
+        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE','test')], ['status', '=', '1']])->first() 
             : null;
 
         if (!$stripeConfig) {
@@ -129,7 +129,7 @@ class PaymentServices
 
     public function createEphemeralKey($data)
     {
-        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', 'test'], ['status', '=', '1']])->first() 
+        $stripeConfig = env('APP_ENV')!='local' ? CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE','test')], ['status', '=', '1']])->first() 
             : null;
 
         if (!$stripeConfig) {

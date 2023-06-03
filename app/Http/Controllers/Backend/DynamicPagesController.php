@@ -135,9 +135,13 @@ class DynamicPagesController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $oldData = CommonDatas::find($id);
         $slug = Str::slug($request->title);
-        $slugCount = CommonDatas::where('key', $slug)->count();
-        $slug .= ($slugCount > 0 ? '-'.$slugCount: '');
+        
+        if($oldData->key!=$slug){
+            $slugCount = CommonDatas::where('key', $slug)->count();
+            $slug .= ($slugCount > 0 ? '-' . $slugCount : '');
+        }
 
         CommonDatas::where('id',$id)->update([
             'key' => trim($slug),

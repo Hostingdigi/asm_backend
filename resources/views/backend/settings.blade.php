@@ -189,7 +189,7 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-success btn-sm" type="submit">CREATE</button>
+                            <button class="btn btn-success btn-sm" type="submit">UPDATE</button>
                             <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
                         </div>
                         </form>
