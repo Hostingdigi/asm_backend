@@ -73,7 +73,9 @@ class OrderServices
 
     public function updateOrderStatus($data)
     {
-        return Order::where('id', $data['orderId'])->update(['status' => $data['statusValue']]);
+        $updateData = ['status' => $data['statusValue']];
+        if($data['statusValue']==6) $updateData = ['status' => $data['statusValue'],'expected_delivery_date' => \Carbon\Carbon::now()->format('Y-m-d')];
+        return Order::where('id', $data['orderId'])->update($updateData);
     }
 
     public function createDummyOrder($orderData)

@@ -1,3 +1,11 @@
+
+@if(session()->has('flashData'))
+<div class="alert {{ "alert-".(session()->get('flashData')['status']==1 ? 'success' : 'danger') }} alert-dismissible fade show" role="alert">
+  <strong>Success!</strong> {{ session()->get('flashData')['message'] }}
+  <button type="button" class="btn-close" data-coreui-dismiss="alert" aria-label="Close"></button>
+</div>
+@endif
+
 <div class="card">
     @if (isset($header))
         <div class="card-header fw-bolder">

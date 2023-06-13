@@ -52,7 +52,7 @@
                                     <p class="mb-1"><strong>{{'#'.$order->order_no}}</strong></p>
                                     <p class="mb-1">Order Date: <strong>{{  \Carbon\Carbon::parse($order->ordered_at)->format('d/m/Y') }}</strong></p>
                                     <p class="mb-1">Order Status: <b>{{ $order->order_status->label ?? '-' }}</b></p>
-                                    <p class="mb-1">Payment Mode: <b>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay On Delivery' }}</b></p>
+                                    <p class="mb-1">Payment Mode: <b>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay Now' }}</b></p>
                                     <p class="mb-1">Payment Status: <b>{{  $order->payment_mode == 'pod' ? ($order->payment_status == 1 ? 'Paid' : 'Pending') : 
                                         ($order->payment_status == 1 ? 'Paid' : 'Failed') }}</b></p>
                                     <p class="mb-1">Transaction number: {{ $paymentDetails['transaction_id'] ?? '-' }}</p>
@@ -84,7 +84,6 @@
                     <p>Address is not available.</p>
                     @endif
                                 </td>
-                                
                                 <td>
                                     @php
                         $shippingDetails = [];
@@ -94,10 +93,15 @@
                                 $shippingDetails = [];
                             }
                     @endphp
-                    <p class="mb-1">Preferred Delivery Date: <strong>{{ !empty($order->preferred_delivery_date) ? \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d/m/Y') : '-' }},</strong></p>
+                    <p class="mb-1">Preferred Delivery Date: <strong>{{ (!empty($order->preferred_delivery_date) && $order->preferred_delivery_date!='0000-00-00') ? \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d/m/Y') : '-' }},</strong></p>
+                    <p class="mb-1">{{ ($order->order_status->status_code!=6) ? 'Expected Delivery' : 'Delivered' }} Date: <strong>{{ !empty($order->expected_delivery_date) ? \Carbon\Carbon::parse($order->expected_delivery_date)->format('d/m/Y') : '' }}</strong>
+                        @if(in_array($order->order_status->status_code,[3,4,5]))
+                        <br><a data-coreui-toggle="modal" href="#updateDelDate"><i class="fa fa-truck"></i> Update Delivery Date</a>  
+                        @endif                        
+                    </p>
                     <p class="mb-1">Delivery Slot: <strong>{{ !empty($order->delivery_slot) ? $order->delivery_slot : '-' }}</strong>,</p>
-                    <p class="mb-0">Delivery Instructions: <strong>{{ !empty($order->delivery_instructions) ? $order->delivery_instructions : '-' }}</strong>,</p>
-                                </td>
+                    <p class="mb-1">Delivery Instructions: <strong>{{ !empty($order->delivery_instructions) ? $order->delivery_instructions : '-' }}</strong>,</p>
+                    </td>
                             </tr>
                         </tbody>
                     </table>
@@ -112,6 +116,30 @@
                 </div>
             </div>
 
+            <div class="modal fade" id="updateDelDate" tabindex="-1" aria-labelledby="updateDelDateLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="updateDelDateLabel">Update Delivery Date</h5>
+                            <button class="btn-close" type="button" data-coreui-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="post" action="{{ route('admin.orders.updateDeliveryDate') }}" id="updateDelDateForm" novalidate>
+                        <div class="modal-body">
+                        {{csrf_field()}}
+                        <input type="hidden" name="order_id" value="{{ $order->id }}">
+                            <div class="mb-3">
+                                <label class="col-form-label">Date <sup class="required">*</sup></label>
+                                <input type="text" value="{{ !empty($order->expected_delivery_date) ? \Carbon\Carbon::parse($order->expected_delivery_date)->format('Y-m-d') : '' }}" required class="form-control" name="del_date" placeholder="Pick a date" autofocus />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success btn-sm" id="updateDelDateFormBtn" type="submit">UPDATE</button>
+                            <button class="btn btn-danger btn-sm" type="button" data-coreui-dismiss="modal">CANCEL</button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
             <table id="orderTable" class="table table-bordered table-hover">
                 <thead class="bg-dark text-center">
@@ -212,7 +240,15 @@
 <script>
     $(document).ready( function () {
 
+        $("input[name='del_date']").datepicker({
+            autoclose : true,
+            startDate: '1d',
+            format : 'yyyy-mm-dd'
+        }).on("change", function() {
+            $("#updateDelDateFormBtn").attr("disabled", false);
+        });
 
+        $("#updateDelDateForm").validate({...validationOptions});
     });
 </script>
 @endpush

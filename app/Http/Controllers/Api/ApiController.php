@@ -59,7 +59,7 @@ class ApiController extends Controller
 
     public function pCheck(Request $request)
     {
-        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE','test')], ['status', '=', '1']])->first();
+        $stripeConfig = CommonDatas::select(['id', 'value_2 as pkey', 'value_3 as skey'])->where([['key', '=', 'stripe-config'], ['value_1', '=', env('PAYMENT_MODE', 'test')], ['status', '=', '1']])->first();
         if (!$stripeConfig) {
             return returnApiResponse(false, 'Stripe configuation is not available');
         }
@@ -527,7 +527,10 @@ class ApiController extends Controller
         $deliveryDaysBlockResults = WeekDaysModel::selectRaw('LOWER(day) day')->where('status', '1')->orderBy('day')->get()->pluck('day');
         $deliveryDateBlockResults = DeliveryDaysModel::selectRaw('day_date')->where('status', '1')->orderBy('day_date')->get()->pluck('day_date');
 
+        $expectedDelDateP = env('EXPECTED_DELIVERY_DATE_PERIOD', 0);
+
         $data = [
+            'preferred_delivery_day_limit' => env('DELIVERY_DATE_PERIOD', 0),
             'delivery_blocked' => [
                 'days' => count($deliveryDaysBlockResults) ? $deliveryDaysBlockResults : null,
                 'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : null,
@@ -535,7 +538,7 @@ class ApiController extends Controller
             'delivery_slots' => $deliverySlots,
             'delivery_note' => [
                 'label' => 'Delivery Expected',
-                'date' => '22 Jul',
+                'date' => $expectedDelDateP != 0 ? \Carbon\Carbon::now()->addDays($expectedDelDateP)->format('d M') : \Carbon\Carbon::now()->format('d M'),
             ],
             'total_amount' => $cartDetails['total_amount'],
             'coupon_details' => $cartDetails['coupon_details'],
@@ -625,7 +628,7 @@ class ApiController extends Controller
     {
 
         $orders = Order::select(['id', 'order_no', 'total_amount', 'tax_amount', 'shipping_amount', 'coupon_code', 'coupon_amount',
-            'billing_details', 'shipping_details', 'ordered_at', 'status'])
+            'billing_details', 'shipping_details', 'ordered_at', 'status', 'expected_delivery_date', 'preferred_delivery_date'])
             ->where('user_id', auth()->id())
             ->latest()
             ->get()->makeHidden(['created_at', 'updated_at']);
@@ -680,7 +683,15 @@ class ApiController extends Controller
                 $orderItem['item']['product_details'] = $productDetails;
                 $orderItem['ordered_at'] = $orderedAt;
 
-                $orderItem['delivery_note'] = 'Delivery Expected Date 22 Jul';
+                if ($order->status == 6) {
+                    $orderItem['delivery_note'] = !empty($order->expected_delivery_date) ? 'Delivered on ' . \Carbon\Carbon::parse($order->expected_delivery_date)->format('d M') : '';
+                } else {
+                    if (!empty($order->preferred_delivery_date)) {
+                        $orderItem['delivery_note'] = !empty($order->preferred_delivery_date) ? 'Delivery Expected Date ' . \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d M') : 'Delivery Soon';
+                    } else {
+                        $orderItem['delivery_note'] = !empty($order->expected_delivery_date) ? 'Delivery Expected Date ' . \Carbon\Carbon::parse($order->expected_delivery_date)->format('d M') : 'Delivery Soon';
+                    }
+                }
 
                 unset($orderItem['item']['created_at']);
                 unset($orderItem['item']['updated_at']);
@@ -716,11 +727,13 @@ class ApiController extends Controller
             $dayAcceptFrom = date('Y-m-d', strtotime('+' . $dayAdditional . ' days'));
 
             if ($request->has('preferred_delivery_date') && !empty($request->preferred_delivery_date)) {
-                if ($request->preferred_delivery_date < $dayAcceptFrom) {
+                if (date('Y-m-d', strtotime($request->preferred_delivery_date)) < $dayAcceptFrom) {
                     return returnApiResponse(false, 'Preferred delivery can accept from ' . date('d/m/Y', strtotime($dayAcceptFrom)));
                 }
             }
         }
+
+        $expectedDelDateP = env('EXPECTED_DELIVERY_DATE_PERIOD', 0);
 
         if ($request->payment_mode == 'card') {
             $isOrderExists = Order::where([['user_id', '=', auth()->id()], ['is_dummy_order', '=', 1]])->first();
@@ -729,7 +742,8 @@ class ApiController extends Controller
                 'is_dummy_order' => 0,
                 'status' => $request->payment_status ? 3 : 9,
                 'payment_status' => $request->payment_status,
-                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? trim($request->preferred_delivery_date) : null,
+                'expected_delivery_date' => $expectedDelDateP != 0 ? \Carbon\Carbon::now()->addDays($expectedDelDateP)->format('Y-m-d') : null,
+                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? date('Y-m-d', strtotime($request->preferred_delivery_date)) : null,
                 'delivery_slot' => $request->has('delivery_slot') ? trim($request->delivery_slot) : null,
                 'delivery_instructions' => $request->has('delivery_instructions') ? trim($request->delivery_instructions) : null,
             ]);
@@ -842,7 +856,8 @@ class ApiController extends Controller
                 'coupon_code' => serialize($couponCode),
                 'billing_details' => serialize($billingDetails),
                 'shipping_details' => serialize($shippingDetails),
-                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? trim($request->preferred_delivery_date) : null,
+                'expected_delivery_date' => $expectedDelDateP != 0 ? \Carbon\Carbon::now()->addDays($expectedDelDateP)->format('Y-m-d') : null,
+                'preferred_delivery_date' => $request->has('preferred_delivery_date') ? date('Y-m-d', strtotime($request->preferred_delivery_date)) : null,
                 'delivery_slot' => $request->has('delivery_slot') ? trim($request->delivery_slot) : null,
                 'delivery_instructions' => $request->has('delivery_instructions') ? trim($request->delivery_instructions) : null,
                 'ordered_at' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),

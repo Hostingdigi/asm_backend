@@ -46,7 +46,7 @@ class OrderController extends Controller
                 ->addColumn('payment_status', function ($row) {
 
                     $paymodes = [
-                        'pod' => 'Pay on Delivery',
+                        'pod' => 'Pay Now',
                         'card' => 'Online',
                     ];
                     $paymentStatus = (!empty($row->payment_mode) ? $paymodes[$row->payment_mode] : $paymodes['pod']) . ' - ';
@@ -56,11 +56,13 @@ class OrderController extends Controller
                     return $paymentStatus;
                 })
                 ->addColumn('ordered', function ($row) {
-                    return formatDate($row->created_at,'d/m/Y h:i A');
+                    return formatDate($row->created_at, 'd/m/Y h:i A');
                 })
                 ->addColumn('status', function ($row) use ($orderStatus) {
 
-                    if ($row->status == 2) {
+                    if ($row->status == 6) {
+                        $statusContent = '<p class="text-success mb-0">Delivered</p>';
+                    } else if ($row->status == 2) {
                         $statusContent = '<p class="text-danger mb-0">Cancelled</p>';
                     } else {
                         $statusContent = '<select class="order_change" data-orderid="' . $row->id . '">';
@@ -112,5 +114,18 @@ class OrderController extends Controller
         ]);
 
         return returnApiResponse(true, 'Updated!');
+    }
+
+    public function updateDeliveryDate(Request $request)
+    {
+        Order::where('id', $request->order_id)->update([
+            'expected_delivery_date' => $request->del_date,
+        ]);
+        $this->flashData = [
+            'status' => 1,
+            'message' => 'Successfully date has been updated.',
+        ];
+        $request->session()->flash('flashData', $this->flashData);
+        return redirect()->back();
     }
 }

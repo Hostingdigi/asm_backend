@@ -160,5 +160,6 @@ Route::group(['prefix' => 'orders', 'as' => 'orders.'], function () {
     });
     Route::get('detail/{orderId}', 'Backend\OrderController@orderDetail')->name('orderDetail');
     Route::post('change-status', 'Backend\OrderController@changeStatus')->name('changeStatus');
+    Route::post('update-del-date', 'Backend\OrderController@updateDeliveryDate')->name('updateDeliveryDate');
 
 });

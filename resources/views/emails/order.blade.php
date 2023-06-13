@@ -98,7 +98,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td>
-                                                        <p style="padding-bottom: 1px; margin: 0;">Delivery Date: <strong>{{ !empty($order->preferred_delivery_date) ? \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d/m/Y') : '-' }}</strong></p>
+                                                        <p style="padding-bottom: 1px; margin: 0;">Delivery Date: <strong>{{ !empty($order->preferred_delivery_date) ? \Carbon\Carbon::parse($order->preferred_delivery_date)->format('d/m/Y') : (!empty($order->expected_delivery_date) ? \Carbon\Carbon::parse($order->expected_delivery_date)->format('d/m/Y')) }}</strong></p>
                                                     </td>
                                                 </tr>
                                                 <tr>
@@ -113,7 +113,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td>
-                                                        <p style="padding-bottom: 1px; margin: 0;">Payment Mode: <strong>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay On Delivery' }}</strong></p>
+                                                        <p style="padding-bottom: 1px; margin: 0;">Payment Mode: <strong>{{ $order->payment_mode == 'card' ? 'Online' : 'Pay Now' }}</strong></p>
                                                     </td>
                                                 </tr>
                                                 <tr>

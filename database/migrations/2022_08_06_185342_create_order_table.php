@@ -29,6 +29,7 @@ class CreateOrderTable extends Migration
             $table->mediumText('billing_details')->nullable();
             $table->mediumText('shipping_details')->nullable();
             $table->dateTime('ordered_at');
+            $table->date('expected_delivery_date')->nullable();
             $table->date('preferred_delivery_date')->nullable();
             $table->mediumText('delivery_slot')->nullable();
             $table->mediumText('delivery_instructions')->nullable();
