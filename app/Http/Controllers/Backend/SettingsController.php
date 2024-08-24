@@ -21,7 +21,7 @@ class SettingsController extends Controller
     {
 
         if (!$request->has('tab')) {
-            return redirect()->route('admin.settings.mobile-application', ['tab' => 'homepage_banner']);
+            //return redirect()->route('admin.settings.mobile-application', ['tab' => 'homepage_banner']);
         }
 
         if ($request->ajax()) {

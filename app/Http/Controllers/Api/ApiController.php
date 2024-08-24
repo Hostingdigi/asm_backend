@@ -533,7 +533,7 @@ class ApiController extends Controller
             'preferred_delivery_day_limit' => env('DELIVERY_DATE_PERIOD', 0),
             'delivery_blocked' => [
                 'days' => count($deliveryDaysBlockResults) ? $deliveryDaysBlockResults : null,
-                'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : null,
+                'dates' => count($deliveryDateBlockResults) ? $deliveryDateBlockResults : '',
             ],
             'delivery_slots' => $deliverySlots,
             'delivery_note' => [
